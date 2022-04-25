@@ -37,10 +37,7 @@ async fn main() {
 
     let handle = handle_line.trim_end();
 
-    // This section defines the addresses used in the call to Sila's API
-    // address: the user's ethereum address
-    let address = H160::from_str("0x...")
-        .expect("couldn't parse address");
+    // This section defines the addresses used in the call to Sila's API;
 
     // app_address: the address of your application as registered with Sila
     let app_address = H160::from_str("0x...")
@@ -53,7 +50,6 @@ async fn main() {
     // this struct is in silamoney::CheckHandleMessageParams
     let check_params = CheckHandleMessageParams {
         sila_handle: handle.to_string(),
-        ethereum_address: address,
     };
 
     // this fn in silamoney::* builds the JSON object that will be sent to Sila based on Sila's
