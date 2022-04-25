@@ -92,7 +92,7 @@ pub async fn register(params: &RegisterParams) -> Result<RegisterResponse, Box<d
     let client = reqwest::Client::new();
     let resp = client
         .post(&_url.to_owned())
-        .header("usersignature", signatures.usersignature)
+        .header("usersignature", signatures.usersignature.unwrap())
         .header("authsignature", signatures.authsignature)
         .json(&message)
         .send()

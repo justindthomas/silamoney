@@ -13,6 +13,7 @@ pub use endpoints::entity::update::phone::*;
 pub use endpoints::entity::*;
 pub use endpoints::wallet::get_sila_balance::*;
 
+use eth_checksum;
 use lazy_static::lazy_static;
 use reqwest;
 use secp256k1::{Secp256k1, SecretKey};
@@ -20,9 +21,9 @@ use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
 use std::convert::TryInto;
 use std::env;
-use web3::{types::H160, types::H256};
-use std::str::FromStr;
 use std::future::Future;
+use std::str::FromStr;
+use web3::{types::H160, types::H256};
 
 pub struct SilaParams {
     pub gateway: String,
@@ -63,7 +64,7 @@ pub struct SignedMessageParams {
     pub ethereum_address: H160,
     pub message: String,
     pub usersignature: Option<String>,
-    pub authsignature: String
+    pub authsignature: String,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -92,48 +93,59 @@ pub fn hash_message(message: String) -> [u8; 32] {
         .expect("Wrong length")
 }
 
+pub fn checksum(address: &str) -> String {
+    eth_checksum::checksum(address)
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct Signatures {
-    pub usersignature: String,
+    pub usersignature: Option<String>,
     pub authsignature: String,
 }
 
+// #[derive(Copy, Clone)]
+// pub struct SignData {
+//     pub address: [u8;20],
+//     pub data: [u8;32],
+//     pub private_key: Option<[u8;32]>
+// }
+
 #[derive(Copy, Clone)]
 pub struct SignData {
-    pub address: [u8;20],
-    pub data: [u8;32],
-    pub private_key: Option<[u8;32]>
+    pub address: [u8; 20],
+    pub data: [u8; 32],
+    pub private_key: Option<[u8; 32]>,
 }
 
 #[derive(Clone)]
 pub struct Signature {
-    pub data: String
+    pub data: String,
 }
 
 #[derive(Copy, Clone)]
 pub struct Signer<F, Fut>
-where 
+where
     F: FnOnce(&mut SignData) -> Fut,
-    Fut: Future<Output = Signature>, {
-    pub sign_func: F
+    Fut: Future<Output = Signature>,
+{
+    pub sign_func: F,
 }
 
 impl<F, Fut> Signer<F, Fut>
-where 
+where
     F: FnOnce(&mut SignData) -> Fut,
-    Fut: Future<Output = Signature> {
-    pub fn new (signer: F) -> Signer<F, Fut> {
-        Signer {
-            sign_func: signer
-        }
+    Fut: Future<Output = Signature>,
+{
+    pub fn new(signer: F) -> Signer<F, Fut> {
+        Signer { sign_func: signer }
     }
 
-    pub fn sign (self, sign_data: &mut SignData) -> Fut {
+    pub fn sign(self, sign_data: &mut SignData) -> Fut {
         (self.sign_func)(sign_data)
     }
 }
 
-pub async fn default_sign(mut user_data: SignData, mut app_data: SignData) -> Signatures {
+pub async fn default_sign(user_data: Option<SignData>, mut app_data: SignData) -> Signatures {
     let user_signer = Signer::new(async move |&mut x| {
         let message = secp256k1::Message::from_slice(&x.data).unwrap();
 
@@ -153,7 +165,9 @@ pub async fn default_sign(mut user_data: SignData, mut app_data: SignData) -> Si
         eth_array[0..64].copy_from_slice(&bytes[0..64]);
         eth_array[64] = recovery_id;
 
-        Signature { data: hex::encode(eth_array) }
+        Signature {
+            data: hex::encode(eth_array),
+        }
     });
 
     let app_signer = Signer::new(async move |&mut x| {
@@ -175,17 +189,28 @@ pub async fn default_sign(mut user_data: SignData, mut app_data: SignData) -> Si
         eth_array[0..64].copy_from_slice(&bytes[0..64]);
         eth_array[64] = recovery_id;
 
-        Signature { data: hex::encode(eth_array) }
+        Signature {
+            data: hex::encode(eth_array),
+        }
     });
 
-    Signatures { usersignature: user_signer.sign(&mut user_data).await.data, authsignature: app_signer.sign(&mut app_data).await.data }
+    match user_data {
+        Some(mut x) => Signatures {
+            usersignature: Option::from(user_signer.sign(&mut x).await.data),
+            authsignature: app_signer.sign(&mut app_data).await.data,
+        },
+        None => Signatures {
+            usersignature: Option::None,
+            authsignature: app_signer.sign(&mut app_data).await.data,
+        },
+    }
 }
 
 // message must be pre-hashed for this data field
 pub struct SignaturesParams {
     pub address: H160,
     pub private_key: Option<H256>,
-    pub data: [u8; 32]
+    pub data: [u8; 32],
 }
 
 pub async fn header_message() -> Result<HeaderMessage, Box<dyn std::error::Error + Sync + Send>> {
@@ -201,8 +226,9 @@ pub async fn header_message() -> Result<HeaderMessage, Box<dyn std::error::Error
 }
 
 // debatable whether this is useful - in the default_signer maybe, but otherwise probable not
-pub async fn sila_app_signature(message_hash: [u8;32])
--> Result<String, Box<dyn std::error::Error + Sync + Send>> {
+pub async fn sila_app_signature(
+    message_hash: [u8; 32],
+) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
 
     Ok(sign_sila(&SignParams {
@@ -213,8 +239,9 @@ pub async fn sila_app_signature(message_hash: [u8;32])
     .await?)
 }
 
-pub async fn sila_signatures(params: &SignaturesParams)
--> Result<Signatures, Box<dyn std::error::Error + Sync + Send>> {
+pub async fn sila_signatures(
+    params: &SignaturesParams,
+) -> Result<Signatures, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
 
     let pvk = format!("{:#x}", params.private_key.clone().unwrap());
@@ -234,7 +261,7 @@ pub async fn sila_signatures(params: &SignaturesParams)
     .await?;
 
     let resp: Signatures = Signatures {
-        usersignature: u_sig,
+        usersignature: Option::from(u_sig),
         authsignature: a_sig,
     };
 

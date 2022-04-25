@@ -39,7 +39,7 @@ pub async fn request_kyc(params: &RequestKycParams) -> Result<RequestKycResponse
     let client = reqwest::Client::new();
     let resp = client
         .post(&_url.to_owned())
-        .header("usersignature", signatures.usersignature)
+        .header("usersignature", signatures.usersignature.unwrap())
         .header("authsignature", signatures.authsignature)
         .json(&message)
         .send()

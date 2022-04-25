@@ -61,7 +61,7 @@ pub async fn update_identity(params: &UpdateIdentityParams) -> Result<UpdateIden
     let client = reqwest::Client::new();
     let resp = client
         .post(&_url.to_owned())
-        .header("usersignature", signatures.usersignature)
+        .header("usersignature", signatures.usersignature.unwrap())
         .header("authsignature", signatures.authsignature)
         .json(&message)
         .send()
