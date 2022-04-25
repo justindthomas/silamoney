@@ -1,3 +1,5 @@
+#![feature(async_closure)]
+
 pub mod endpoints;
 
 pub use endpoints::account::link_account::*;
@@ -20,6 +22,7 @@ use std::convert::TryInto;
 use std::env;
 use web3::{types::H160, types::H256};
 use std::str::FromStr;
+use std::future::Future;
 
 pub struct SilaParams {
     pub gateway: String,
@@ -102,33 +105,36 @@ pub struct SignData {
     pub private_key: Option<[u8;32]>
 }
 
+#[derive(Clone)]
 pub struct Signature {
     pub data: String
 }
 
 #[derive(Copy, Clone)]
-pub struct Signer<F>
-where F: FnOnce(&mut SignData) -> Signature {
+pub struct Signer<F, Fut>
+where 
+    F: FnOnce(&mut SignData) -> Fut,
+    Fut: Future<Output = Signature>, {
     pub sign_func: F
 }
 
-impl<F> Signer<F>
-where F: FnOnce(&mut SignData) -> Signature {
-    pub fn new (signer: F) -> Signer<F> {
+impl<F, Fut> Signer<F, Fut>
+where 
+    F: FnOnce(&mut SignData) -> Fut,
+    Fut: Future<Output = Signature> {
+    pub fn new (signer: F) -> Signer<F, Fut> {
         Signer {
             sign_func: signer
         }
     }
 
-    pub fn sign (self, sign_data: &mut SignData) -> Signature {
+    pub fn sign (self, sign_data: &mut SignData) -> Fut {
         (self.sign_func)(sign_data)
     }
 }
 
-pub fn default_sign(mut user_data: SignData, mut app_data: SignData) -> Signatures {
-    let sila_params = &*crate::SILA_PARAMS;
-
-    let signer = Signer::new(|&mut x| {
+pub async fn default_sign(mut user_data: SignData, mut app_data: SignData) -> Signatures {
+    let user_signer = Signer::new(async move |&mut x| {
         let message = secp256k1::Message::from_slice(&x.data).unwrap();
 
         let secret_key = SecretKey::from_slice(&x.private_key.unwrap()).unwrap();
@@ -150,7 +156,29 @@ pub fn default_sign(mut user_data: SignData, mut app_data: SignData) -> Signatur
         Signature { data: hex::encode(eth_array) }
     });
 
-    Signatures { usersignature: signer.sign(&mut user_data).data, authsignature: signer.sign(&mut app_data).data }
+    let app_signer = Signer::new(async move |&mut x| {
+        let message = secp256k1::Message::from_slice(&x.data).unwrap();
+
+        let secret_key = SecretKey::from_slice(&x.private_key.unwrap()).unwrap();
+        let secp = Secp256k1::new();
+        let signature = secp.sign_ecdsa_recoverable(&message, &secret_key);
+
+        let (id, bytes) = signature.serialize_compact();
+
+        // https://github.com/pubkey/eth-crypto/blob/master/src/sign.js
+        let recovery_id = match id.to_i32() {
+            1 => 0x1c,
+            _ => 0x1b,
+        };
+
+        let mut eth_array = [0; 65];
+        eth_array[0..64].copy_from_slice(&bytes[0..64]);
+        eth_array[64] = recovery_id;
+
+        Signature { data: hex::encode(eth_array) }
+    });
+
+    Signatures { usersignature: user_signer.sign(&mut user_data).await.data, authsignature: app_signer.sign(&mut app_data).await.data }
 }
 
 // message must be pre-hashed for this data field
@@ -172,6 +200,7 @@ pub async fn header_message() -> Result<HeaderMessage, Box<dyn std::error::Error
     Ok(resp)
 }
 
+// debatable whether this is useful - in the default_signer maybe, but otherwise probable not
 pub async fn sila_app_signature(message_hash: [u8;32])
 -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
