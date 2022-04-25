@@ -6,7 +6,7 @@ This is an early work-in-progress. Work is currently focused on establishing the
 
 ## Example
 
-A call to Sila's `check_kyc` endpoint can be accomplished in the following way.
+A call to Sila's `check_handle` endpoint can be accomplished in the following way.
 
 ~~~
 use serde::{Deserialize, Serialize};
