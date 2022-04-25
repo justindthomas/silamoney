@@ -1,12 +1,16 @@
 use serde::{Deserialize, Serialize};
 use log::error;
+use web3::{
+    types::H160,
+    types::H256
+};
 
-use crate::{sila_signatures, Header, Signatures, SignaturesParams, Status};
+use crate::{sila_signatures, hash_message, Header, Signatures, SignaturesParams, Status};
 
 pub struct LinkParams {
     pub customer_sila_handle: String,
-    pub customer_eth_address: String,
-    pub customer_private_key: String,
+    pub customer_eth_address: H160,
+    pub private_key: Option<H256>,
     pub sila_bank_identifier: String,
     pub sila_bank_token: String,
 }
@@ -52,8 +56,9 @@ pub async fn link_account(params: &LinkParams) -> Result<LinkResponse, Box<dyn s
     
     let signatures: Signatures = sila_signatures(&SignaturesParams {
         address: params.customer_eth_address.clone(),
-        private_key: params.customer_private_key.clone(),
-        data: serde_json::to_string(&message)?}).await?;
+        private_key: params.private_key.clone(),
+        data: hash_message(serde_json::to_string(&message)?),
+    }).await?;
 
     let client = reqwest::Client::new();
     let resp = client

@@ -1,7 +1,11 @@
 use serde::{Deserialize, Serialize};
 use log::error;
+use web3::{
+    types::H160,
+    types::H256
+};
 
-use crate::{header_message, sila_signatures, Header, HeaderMessage, Signatures, SignaturesParams};
+use crate::{header_message, sila_signatures, hash_message, Header, HeaderMessage, Signatures, SignaturesParams};
 use crate::endpoints::entity::*;
 
 #[derive(Deserialize, Serialize)]
@@ -33,25 +37,17 @@ pub struct UpdateAddressMessage {
     pub country: Option<String>
 }
 
-#[derive(Deserialize, Serialize)]
 pub struct UpdateAddressParams {
     pub customer_sila_handle: String,
-    pub customer_eth_address: String,
-    pub customer_private_key: String,
+    pub customer_eth_address: H160,
+    pub private_key: Option<H256>,
     pub uuid: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub address_alias: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub street_address_1: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub street_address_2: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub city: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub postal_code: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<String>
 }
 
@@ -59,8 +55,8 @@ impl Default for UpdateAddressParams {
     fn default() -> Self { 
         UpdateAddressParams {  
             customer_sila_handle: String::new(),
-            customer_eth_address: String::new(),
-            customer_private_key: String::new(),
+            customer_eth_address: H160::zero(),
+            private_key: Option::from(H256::zero()),
             uuid: String::new(),
             address_alias: None,
             street_address_1: None,
@@ -95,10 +91,13 @@ pub async fn update_address(params: &UpdateAddressParams) -> Result<UpdateAddres
         country: params.country.clone()
     };
     
+    let cb = || {};
+
     let signatures: Signatures = sila_signatures(&SignaturesParams {
         address: params.customer_eth_address.clone(),
-        private_key: params.customer_private_key.clone(),
-        data: serde_json::to_string(&message)? }).await?;
+        private_key: params.private_key.clone(),
+        data: hash_message(serde_json::to_string(&message)?)
+    }).await?;
 
     let client = reqwest::Client::new();
     let resp = client

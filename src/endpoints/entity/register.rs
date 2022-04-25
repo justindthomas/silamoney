@@ -1,7 +1,12 @@
 use serde::{Deserialize, Serialize};
 use log::error;
+use web3::{
+    types::H160,
+    types::H256
+};
 
 use crate::endpoints::entity::*;
+use crate::hash_message;
 
 #[derive(Deserialize, Serialize)]
 pub struct RegisterMessage {
@@ -26,8 +31,8 @@ pub async fn register_message() -> Result<RegisterMessage, Box<dyn std::error::E
 
 pub struct RegisterParams {
     pub sila_handle: String,
-    pub sila_private_key: String,
-    pub ethereum_address: String,
+    pub private_key: Option<H256>,
+    pub ethereum_address: H160,
     pub birthdate: String,
     pub first_name: String,
     pub last_name: String,
@@ -75,13 +80,14 @@ pub async fn register(params: &RegisterParams) -> Result<RegisterResponse, Box<d
     message.contact.phone = params.phone.clone();
     message.contact.email = params.email.clone();
 
-    message.crypto_entry.crypto_address = params.ethereum_address.clone();
+    message.crypto_entry.crypto_address = params.ethereum_address.clone().to_string();
     message.crypto_entry.crypto_code = "ETH".to_string();
 
     let signatures: Signatures = sila_signatures(&SignaturesParams {
         address: params.ethereum_address.clone(),
-        private_key: params.sila_private_key.clone(),
-        data: serde_json::to_string(&message)?}).await?;
+        private_key: params.private_key.clone(),
+        data: hash_message(serde_json::to_string(&message)?)
+    }).await?;
 
     let client = reqwest::Client::new();
     let resp = client

@@ -1,12 +1,17 @@
 use serde::{Deserialize, Serialize};
 use log::error;
+use web3::{
+    types::H160,
+    types::H256
+};
 
 use crate::endpoints::entity::*;
+use crate::hash_message;
 
 pub struct RequestKycParams {
     pub customer_sila_handle: String,
-    pub customer_eth_address: String,
-    pub customer_private_key: String
+    pub customer_eth_address: H160,
+    pub customer_private_key: Option<H256>
 }
 
 #[derive(Serialize, Deserialize)]
@@ -24,11 +29,12 @@ pub async fn request_kyc(params: &RequestKycParams) -> Result<RequestKycResponse
     let mut message: HeaderMessage = header_message().await?;
     message.header.user_handle = params.customer_sila_handle.clone();
     message.header.auth_handle = sila_params.app_handle.clone();
-    
+
     let signatures: Signatures = sila_signatures(&SignaturesParams {
         address: params.customer_eth_address.clone(),
         private_key: params.customer_private_key.clone(),
-        data: serde_json::to_string(&message)? }).await?;
+        data: hash_message(serde_json::to_string(&message)?)
+    }).await?;
 
     let client = reqwest::Client::new();
     let resp = client

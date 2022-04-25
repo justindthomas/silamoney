@@ -1,22 +1,25 @@
 pub mod endpoints;
 
+pub use endpoints::account::link_account::*;
+pub use endpoints::entity::check_kyc::*;
+pub use endpoints::entity::register::*;
+pub use endpoints::entity::request_kyc::*;
 pub use endpoints::entity::update::address::*;
-pub use endpoints::entity::update::phone::*;
 pub use endpoints::entity::update::email::*;
 pub use endpoints::entity::update::identity::*;
-pub use endpoints::entity::request_kyc::*;
-pub use endpoints::wallet::get_sila_balance::*;
-pub use endpoints::entity::register::*;
-pub use endpoints::entity::check_kyc::*;
+pub use endpoints::entity::update::phone::*;
 pub use endpoints::entity::*;
-pub use endpoints::account::link_account::*;
+pub use endpoints::wallet::get_sila_balance::*;
 
-use reqwest;
-use sha3::{ Digest, Keccak256 };
-use secp256k1::{ Secp256k1, SecretKey };
-use serde::{ Deserialize, Serialize };
 use lazy_static::lazy_static;
+use reqwest;
+use secp256k1::{Secp256k1, SecretKey};
+use serde::{Deserialize, Serialize};
+use sha3::{Digest, Keccak256};
+use std::convert::TryInto;
 use std::env;
+use web3::{types::H160, types::H256};
+use std::str::FromStr;
 
 pub struct SilaParams {
     pub gateway: String,
@@ -27,20 +30,19 @@ pub struct SilaParams {
 
 lazy_static! {
     static ref SILA_PARAMS: SilaParams = {
-        SilaParams { 
+        SilaParams {
             gateway: env::var("SILA_GATEWAY").expect("SILA_GATEWAY must be set"),
             app_handle: env::var("SILA_APP_HANDLE").expect("SILA_APP_HANDLE must be set"),
             app_address: env::var("SILA_APP_ADDRESS").expect("SILA_APP_ADDRESS must be set"),
-            app_private_key: env::var("SILA_APP_KEY").expect("SILA_APP_KEY must be set")
+            app_private_key: env::var("SILA_APP_KEY").expect("SILA_APP_KEY must be set"),
         }
     };
 }
 
-#[derive(Deserialize, Serialize)]
-#[derive(PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq)]
 pub enum Status {
     SUCCESS,
-    FAILURE
+    FAILURE,
 }
 
 impl std::fmt::Display for Status {
@@ -50,6 +52,15 @@ impl std::fmt::Display for Status {
             Status::FAILURE => write!(f, "FAILURE"),
         }
     }
+}
+
+#[derive(Clone)]
+pub struct SignedMessageParams {
+    pub sila_handle: String,
+    pub ethereum_address: H160,
+    pub message: String,
+    pub usersignature: Option<String>,
+    pub authsignature: String
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -68,64 +79,162 @@ pub struct HeaderMessage {
     pub message: String,
 }
 
+pub fn hash_message(message: String) -> [u8; 32] {
+    let mut hasher = Keccak256::new();
+    hasher.update(&message);
+    hasher
+        .finalize()
+        .as_slice()
+        .try_into()
+        .expect("Wrong length")
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct Signatures {
     pub usersignature: String,
     pub authsignature: String,
 }
 
+#[derive(Copy, Clone)]
+pub struct SignData {
+    pub address: [u8;20],
+    pub data: [u8;32],
+    pub private_key: Option<[u8;32]>
+}
+
+pub struct Signature {
+    pub data: String
+}
+
+#[derive(Copy, Clone)]
+pub struct Signer<F>
+where F: FnOnce(&mut SignData) -> Signature {
+    pub sign_func: F
+}
+
+impl<F> Signer<F>
+where F: FnOnce(&mut SignData) -> Signature {
+    pub fn new (signer: F) -> Signer<F> {
+        Signer {
+            sign_func: signer
+        }
+    }
+
+    pub fn sign (self, sign_data: &mut SignData) -> Signature {
+        (self.sign_func)(sign_data)
+    }
+}
+
+pub fn default_sign(mut user_data: SignData, mut app_data: SignData) -> Signatures {
+    let sila_params = &*crate::SILA_PARAMS;
+
+    let signer = Signer::new(|&mut x| {
+        let message = secp256k1::Message::from_slice(&x.data).unwrap();
+
+        let secret_key = SecretKey::from_slice(&x.private_key.unwrap()).unwrap();
+        let secp = Secp256k1::new();
+        let signature = secp.sign_ecdsa_recoverable(&message, &secret_key);
+
+        let (id, bytes) = signature.serialize_compact();
+
+        // https://github.com/pubkey/eth-crypto/blob/master/src/sign.js
+        let recovery_id = match id.to_i32() {
+            1 => 0x1c,
+            _ => 0x1b,
+        };
+
+        let mut eth_array = [0; 65];
+        eth_array[0..64].copy_from_slice(&bytes[0..64]);
+        eth_array[64] = recovery_id;
+
+        Signature { data: hex::encode(eth_array) }
+    });
+
+    Signatures { usersignature: signer.sign(&mut user_data).data, authsignature: signer.sign(&mut app_data).data }
+}
+
+// message must be pre-hashed for this data field
 pub struct SignaturesParams {
-    pub address: String,
-    pub private_key: String,
-    pub data: String,
+    pub address: H160,
+    pub private_key: Option<H256>,
+    pub data: [u8; 32]
 }
 
 pub async fn header_message() -> Result<HeaderMessage, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
-    
-    let _url: String = format!("{}/getmessage?emptymessage=HeaderTestMessage", sila_params.gateway);
 
+    let _url: String = format!(
+        "{}/getmessage?emptymessage=HeaderTestMessage",
+        sila_params.gateway
+    );
     let resp: HeaderMessage = reqwest::get(&_url.to_owned()).await?.json().await?;
 
     Ok(resp)
 }
 
-pub async fn sila_signatures(params: &SignaturesParams) -> Result<Signatures, Box<dyn std::error::Error + Sync + Send>> {
+pub async fn sila_app_signature(message_hash: [u8;32])
+-> Result<String, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
-    
-    let u_sig: String = sign_sila(&SignParams { message: params.data.clone(), address: params.address.clone(), private_key: params.private_key.clone() }).await?;
-    let a_sig: String = sign_sila(&SignParams { message: params.data.clone(), address: sila_params.app_address.clone(), private_key: sila_params.app_private_key.clone() }).await?;
 
-    let resp: Signatures = Signatures { 
+    Ok(sign_sila(&SignParams {
+        message_hash: message_hash.clone(),
+        address: sila_params.app_address.clone(),
+        private_key: sila_params.app_private_key.clone(),
+    })
+    .await?)
+}
+
+pub async fn sila_signatures(params: &SignaturesParams)
+-> Result<Signatures, Box<dyn std::error::Error + Sync + Send>> {
+    let sila_params = &*crate::SILA_PARAMS;
+
+    let pvk = format!("{:#x}", params.private_key.clone().unwrap());
+
+    let u_sig: String = sign_sila(&SignParams {
+        message_hash: params.data.clone(),
+        address: params.address.clone().to_string(),
+        private_key: pvk.to_string(),
+    })
+    .await?;
+
+    let a_sig: String = sign_sila(&SignParams {
+        message_hash: params.data.clone(),
+        address: sila_params.app_address.clone(),
+        private_key: sila_params.app_private_key.clone(),
+    })
+    .await?;
+
+    let resp: Signatures = Signatures {
         usersignature: u_sig,
-        authsignature: a_sig
+        authsignature: a_sig,
     };
 
     Ok(resp)
 }
 
-#[derive(Serialize)]
 pub struct SignParams {
-    pub message: String,
+    pub message_hash: [u8; 32],
     pub address: String,
-    pub private_key: String
+    pub private_key: String,
 }
 
-pub async fn sign_sila(params: &SignParams) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
-    let mut hasher = Keccak256::new();
-    hasher.update(&params.message);
-    let hash = hasher.finalize();
+pub async fn sign_sila(
+    params: &SignParams,
+) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
+    let message = secp256k1::Message::from_slice(&params.message_hash).unwrap();
 
-    let message = secp256k1::Message::from_slice(&hash).unwrap();
-
-    let secret_key = SecretKey::from_slice(&hex::decode(&params.private_key[2..].to_string()).unwrap()).unwrap();
+    let secret_key =
+        SecretKey::from_slice(&hex::decode(&params.private_key[2..].to_string()).unwrap()).unwrap();
     let secp = Secp256k1::new();
     let signature = secp.sign_ecdsa_recoverable(&message, &secret_key);
 
     let (id, bytes) = signature.serialize_compact();
 
     // https://github.com/pubkey/eth-crypto/blob/master/src/sign.js
-    let recovery_id = match id.to_i32() { 1 => { 0x1c }, _ => { 0x1b }};
+    let recovery_id = match id.to_i32() {
+        1 => 0x1c,
+        _ => 0x1b,
+    };
 
     let mut eth_array = [0; 65];
     eth_array[0..64].copy_from_slice(&bytes[0..64]);

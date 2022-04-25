@@ -15,3 +15,5 @@ lazy_static = "1.4.0"
 reqwest = { version = "0.11.6", features = ["default-tls", "gzip", "json"] }
 env_logger = "0.9.0"
 log = "0.4.11"
+web3 = "0.18.0"
+slice_as_array = "1.1.0"
