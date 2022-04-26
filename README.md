@@ -29,16 +29,21 @@ struct SilaSignServiceParams {
 
 #[tokio::main]
 async fn main() {
+~~~
 
-    // This section will capture a handle to check for existence from stdin
+This section will capture a handle to check for existence from stdin.
+
+~~~
     println!("Handle:");
     let mut handle_line = String::new();
     stdin().read_line(&mut handle_line).unwrap();
 
     let handle = handle_line.trim_end();
+~~~
 
-    // This section defines the addresses used in the call to Sila's API;
+This section defines the addresses used in the call to Sila's API.
 
+~~~
     // app_address: the address of your application as registered with Sila
     let app_address = H160::from_str("0x...")
         .expect("failed to parse app_address");
@@ -46,40 +51,51 @@ async fn main() {
     // app_private_key: the private key associated with your application's registered address
     let app_private_key = H256::from_str("0x...)
         .expect("failed to parse app_private_key");
-    
-    // this struct is in silamoney::CheckHandleMessageParams
+~~~
+
+This struct is in silamoney::CheckHandleMessageParams.
+
+~~~
     let check_params = CheckHandleMessageParams {
         sila_handle: handle.to_string(),
     };
+~~~
 
-    // this fn in silamoney::* builds the JSON object that will be sent to Sila based on Sila's
-    // API expectations
+This `fn` in `silamoney::*` builds the JSON object that will be sent to Sila based on Sila's API expectations.
+
+~~~
     let message = check_handle_message(&check_params)
         .await
         .expect("check_handle_message failed");
+~~~
 
-    // this is a call to silamoney::hash_message that begins to set up the structure necessary
-    // to authenticate the request to the Sila API
+This is a call to `silamoney::hash_message` that begins to set up the structure necessary to authenticate the request to the Sila API.
+
+~~~
     let hash = hash_message(message.clone());
+~~~
 
-    // this struct is in silamoney::SignData and is used by the Signer function to sign the
-    // Sila API request for authentication against your registered application
+This struct is in silamoney::SignData and is used by the Signer function to sign the Sila API request for authentication against your registered application.
+
+~~~
     let app_data = SignData {
         address: *app_address.as_fixed_bytes(),
         data: hash,
         private_key: Option::from(*app_private_key.as_fixed_bytes()),
     };
+~~~
 
-    // provisions exist in the silamoney crate to specify a custom signer
-    // this default_sign function builds Signer that requires the application to have direct access
-    // to customer private keys
+Provisions exist in the `silamoney` crate to specify a custom signer. This `default_sign` function builds a Signer that requires the application to have direct access to customer private keys.
     
-    // because check_handle does not require a usersignature, Option::None is provided to the function
-    // to skip the creation of that Signature
-    let signatures = default_sign(Option::None, app_data).await;
+Because `check_handle` does not require a `usersignature`, `Option::None` is provided to the function to skip the creation of that Signature.
 
-    // this struct is is in silamoney::SignedMessageParams
-    // it is used to finally send the request to the check_handle endpoint
+~~~
+    let signatures = default_sign(Option::None, app_data).await;
+~~~
+
+This struct is is in `silamoney::SignedMessageParams`. It is used to send the request to the `check_handle` endpoint.
+
+~~~
     let smp = SignedMessageParams {
         ethereum_address: address.clone(),
         sila_handle: handle.to_string(),
@@ -87,9 +103,11 @@ async fn main() {
         usersignature: Option::None,
         authsignature: signatures.authsignature,
     };
+~~~
 
-    // the check_handle function is in silamoney::* and executes the request to the Sila API and waits
-    // for a response
+The `check_handle` function is in `silamoney::*` and executes the request to the Sila API and waits for a response.
+
+~~~
     let response = check_handle(&smp).await;
 
     println!("Response: {:?}", serde_json::to_string(&response.unwrap()));
