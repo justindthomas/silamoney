@@ -4,7 +4,7 @@ pub mod request_kyc;
 pub mod update;
 
 use crate::{
-    header_message, sila_signatures, Header, HeaderMessage, Signatures, SignaturesParams,
+    header_message, Header, HeaderMessage,
     SignedMessageParams, Status,
 };
 
@@ -211,7 +211,6 @@ pub struct CheckResponse {
 
 pub struct CheckHandleMessageParams {
     pub sila_handle: String,
-    pub ethereum_address: H160,
 }
 
 pub async fn check_handle_message(

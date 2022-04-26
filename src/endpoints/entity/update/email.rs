@@ -1,17 +1,13 @@
 use serde::{Deserialize, Serialize};
 use log::error;
-use web3::{
-    types::H160,
-    types::H256
-};
+use web3::types::H160;
 
-use crate::{header_message, sila_signatures, hash_message, Header, HeaderMessage, Signatures, SignaturesParams};
+use crate::{header_message, Header, HeaderMessage, SignedMessageParams};
 use crate::endpoints::entity::*;
 
-pub struct UpdateEmailParams {
-    pub customer_sila_handle: String,
-    pub customer_eth_address: H160,
-    pub private_key: Option<H256>,
+pub struct UpdateEmailMessageParams {
+    pub sila_handle: String,
+    pub ethereum_address: H160,
     pub uuid: String,
     pub email: String
 }
@@ -33,14 +29,14 @@ pub struct UpdateEmailMessage {
     pub email: String
 }
 
-pub async fn update_email(params: &UpdateEmailParams) -> Result<UpdateEmailResponse, Box<dyn std::error::Error + Sync + Send>> {
+pub async fn update_email_message(
+    params: &UpdateEmailMessageParams,
+) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
-
-    let _url: String = format!("{}/update/email", sila_params.gateway);
 
     let header_message: HeaderMessage = header_message().await?;
     let mut header = header_message.header.clone();
-    header.user_handle = params.customer_sila_handle.clone();
+    header.user_handle = params.sila_handle.clone();
     header.auth_handle = sila_params.app_handle.clone();
 
     let message = UpdateEmailMessage {
@@ -48,19 +44,23 @@ pub async fn update_email(params: &UpdateEmailParams) -> Result<UpdateEmailRespo
         uuid: params.uuid.clone(),
         email: params.email.clone()
     };
-    
-    let signatures: Signatures = sila_signatures(&SignaturesParams {
-        address: params.customer_eth_address.clone(),
-        private_key: params.private_key.clone(),
-        data: hash_message(serde_json::to_string(&message)?),
-    }).await?;
+
+    Ok(serde_json::to_string(&message)?)
+}
+
+pub async fn update_email(params: &SignedMessageParams) -> Result<UpdateEmailResponse, Box<dyn std::error::Error + Sync + Send>> {
+    let sila_params = &*crate::SILA_PARAMS;
+
+    let _url: String = format!("{}/update/email", sila_params.gateway);
+
+    let h: UpdateEmailMessage = serde_json::from_str(&params.message.clone()).unwrap();
 
     let client = reqwest::Client::new();
     let resp = client
         .post(&_url.to_owned())
-        .header("usersignature", signatures.usersignature.unwrap())
-        .header("authsignature", signatures.authsignature)
-        .json(&message)
+        .header("usersignature", params.usersignature.clone().unwrap())
+        .header("authsignature", params.authsignature.clone())
+        .json(&h)
         .send()
         .await?;
     

@@ -1,17 +1,13 @@
 use serde::{Deserialize, Serialize};
 use log::error;
-use web3::{
-    types::H160,
-    types::H256
-};
+use web3::types::H160;
 
-use crate::{header_message, sila_signatures, hash_message, Header, HeaderMessage, Signatures, SignaturesParams};
+use crate::{header_message, Header, HeaderMessage};
 use crate::endpoints::entity::*;
 
-pub struct UpdateIdentityParams {
-    pub customer_sila_handle: String,
-    pub customer_eth_address: H160,
-    pub private_key: Option<H256>,
+pub struct UpdateIdentityMessageParams {
+    pub sila_handle: String,
+    pub ethereum_address: H160,
     pub uuid: String,
     pub identity_alias: String,
     pub identity_value: String
@@ -35,14 +31,14 @@ pub struct UpdateIdentityMessage {
     pub identity_value: String
 }
 
-pub async fn update_identity(params: &UpdateIdentityParams) -> Result<UpdateIdentityResponse, Box<dyn std::error::Error + Sync + Send>> {
+pub async fn update_identity_message(
+    params: &UpdateIdentityMessageParams,
+) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
-
-    let _url: String = format!("{}/update/identity", sila_params.gateway);
 
     let header_message: HeaderMessage = header_message().await?;
     let mut header = header_message.header.clone();
-    header.user_handle = params.customer_sila_handle.clone();
+    header.user_handle = params.sila_handle.clone();
     header.auth_handle = sila_params.app_handle.clone();
 
     let message = UpdateIdentityMessage {
@@ -51,19 +47,23 @@ pub async fn update_identity(params: &UpdateIdentityParams) -> Result<UpdateIden
         identity_alias: params.identity_alias.clone(),
         identity_value: params.identity_value.clone()
     };
-    
-    let signatures: Signatures = sila_signatures(&SignaturesParams {
-        address: params.customer_eth_address.clone(),
-        private_key: params.private_key.clone(),
-        data: hash_message(serde_json::to_string(&message)?),
-    }).await?;
+
+    Ok(serde_json::to_string(&message)?)
+}
+
+pub async fn update_identity(params: &SignedMessageParams) -> Result<UpdateIdentityResponse, Box<dyn std::error::Error + Sync + Send>> {
+    let sila_params = &*crate::SILA_PARAMS;
+
+    let _url: String = format!("{}/update/identity", sila_params.gateway);
+
+    let h: UpdateIdentityMessage = serde_json::from_str(&params.message.clone()).unwrap();
 
     let client = reqwest::Client::new();
     let resp = client
         .post(&_url.to_owned())
-        .header("usersignature", signatures.usersignature.unwrap())
-        .header("authsignature", signatures.authsignature)
-        .json(&message)
+        .header("usersignature", params.usersignature.clone().unwrap())
+        .header("authsignature", params.authsignature.clone())
+        .json(&h)
         .send()
         .await?;
     

@@ -6,7 +6,6 @@ use web3::{
 };
 
 use crate::endpoints::entity::*;
-use crate::hash_message;
 
 #[derive(Deserialize, Serialize)]
 pub struct RegisterMessage {
@@ -19,7 +18,7 @@ pub struct RegisterMessage {
     pub entity: Entity,
 }
 
-pub async fn register_message() -> Result<RegisterMessage, Box<dyn std::error::Error + Sync + Send>> {
+pub async fn register_message_template() -> Result<RegisterMessage, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
 
     let _url: String = format!("{}/getmessage?emptymessage=EntityTestMessage", sila_params.gateway);
@@ -29,9 +28,8 @@ pub async fn register_message() -> Result<RegisterMessage, Box<dyn std::error::E
     Ok(resp)
 }
 
-pub struct RegisterParams {
+pub struct RegisterMessageParams {
     pub sila_handle: String,
-    pub private_key: Option<H256>,
     pub ethereum_address: H160,
     pub birthdate: String,
     pub first_name: String,
@@ -45,19 +43,12 @@ pub struct RegisterParams {
     pub ssn: String,
 }
 
-#[derive(Deserialize)]
-pub struct RegisterResponse {
-    pub message: String,
-    pub reference: String,
-    pub status: Status,
-}
-
-pub async fn register(params: &RegisterParams) -> Result<RegisterResponse, Box<dyn std::error::Error + Sync + Send>> {
+pub async fn register_message(
+    params: &RegisterMessageParams,
+) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
-    
-    let _url: String = format!("{}/register", sila_params.gateway);
 
-    let mut message: RegisterMessage = register_message().await?;
+    let mut message: RegisterMessage = register_message_template().await?;
     message.header.user_handle = params.sila_handle.clone();
     message.header.auth_handle = sila_params.app_handle.clone();
 
@@ -83,18 +74,29 @@ pub async fn register(params: &RegisterParams) -> Result<RegisterResponse, Box<d
     message.crypto_entry.crypto_address = params.ethereum_address.clone().to_string();
     message.crypto_entry.crypto_code = "ETH".to_string();
 
-    let signatures: Signatures = sila_signatures(&SignaturesParams {
-        address: params.ethereum_address.clone(),
-        private_key: params.private_key.clone(),
-        data: hash_message(serde_json::to_string(&message)?)
-    }).await?;
+    Ok(serde_json::to_string(&message)?)
+}
+
+#[derive(Deserialize)]
+pub struct RegisterResponse {
+    pub message: String,
+    pub reference: String,
+    pub status: Status,
+}
+
+pub async fn register(params: &SignedMessageParams) -> Result<RegisterResponse, Box<dyn std::error::Error + Sync + Send>> {
+    let sila_params = &*crate::SILA_PARAMS;
+    
+    let _url: String = format!("{}/register", sila_params.gateway);
+
+    let h: RegisterMessage = serde_json::from_str(&params.message.clone()).unwrap();
 
     let client = reqwest::Client::new();
     let resp = client
         .post(&_url.to_owned())
-        .header("usersignature", signatures.usersignature.unwrap())
-        .header("authsignature", signatures.authsignature)
-        .json(&message)
+        .header("usersignature", params.usersignature.clone().unwrap())
+        .header("authsignature", params.authsignature.clone())
+        .json(&h)
         .send()
         .await?;
 

@@ -1,5 +1,4 @@
 use crate::endpoints::entity::*;
-use crate::hash_message;
 
 pub struct CheckKycMessageParams {
     pub sila_handle: String,
@@ -10,8 +9,6 @@ pub async fn check_kyc_message(
     params: &CheckKycMessageParams,
 ) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
-
-    let _url: String = format!("{}/check_kyc", sila_params.gateway);
 
     let mut header: HeaderMessage = header_message().await?;
     header.header.user_handle = params.sila_handle.clone();
@@ -24,13 +21,15 @@ pub async fn check_kyc(params: &SignedMessageParams) ->  Result<CheckResponse, B
     let sila_params = &*crate::SILA_PARAMS;
     
     let _url: String = format!("{}/check_kyc", sila_params.gateway);
-    
+
+    let h: HeaderMessage = serde_json::from_str(&params.message.clone()).unwrap();
+
     let client = reqwest::Client::new();
     let resp: reqwest::Response = client
         .post(&_url.to_owned())
         .header("usersignature", &params.usersignature.clone().unwrap())
         .header("authsignature", &params.authsignature)
-        .json(&params.message)
+        .json(&h)
         .send()
         .await?;
 

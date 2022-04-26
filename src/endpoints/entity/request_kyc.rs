@@ -6,7 +6,6 @@ use web3::{
 };
 
 use crate::endpoints::entity::*;
-use crate::hash_message;
 
 pub struct RequestKycParams {
     pub customer_sila_handle: String,
@@ -21,27 +20,36 @@ pub struct RequestKycResponse {
     pub status: Status,
 }
 
-pub async fn request_kyc(params: &RequestKycParams) -> Result<RequestKycResponse, Box<dyn std::error::Error + Sync + Send>> {
+pub struct RequestKycMessageParams {
+    pub sila_handle: String,
+    pub ethereum_address: H160,
+}
+
+pub async fn request_kyc_message(
+    params: &RequestKycMessageParams,
+) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
+    let sila_params = &*crate::SILA_PARAMS;
+
+    let mut header: HeaderMessage = header_message().await?;
+    header.header.user_handle = params.sila_handle.clone();
+    header.header.auth_handle = sila_params.app_handle.clone();
+
+    Ok(serde_json::to_string(&header)?)
+}
+
+pub async fn request_kyc(params: &SignedMessageParams) -> Result<RequestKycResponse, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
 
     let _url: String = format!("{}/request_kyc", sila_params.gateway);
 
-    let mut message: HeaderMessage = header_message().await?;
-    message.header.user_handle = params.customer_sila_handle.clone();
-    message.header.auth_handle = sila_params.app_handle.clone();
-
-    let signatures: Signatures = sila_signatures(&SignaturesParams {
-        address: params.customer_eth_address.clone(),
-        private_key: params.customer_private_key.clone(),
-        data: hash_message(serde_json::to_string(&message)?)
-    }).await?;
+    let h: HeaderMessage = serde_json::from_str(&params.message.clone()).unwrap();
 
     let client = reqwest::Client::new();
     let resp = client
         .post(&_url.to_owned())
-        .header("usersignature", signatures.usersignature.unwrap())
-        .header("authsignature", signatures.authsignature)
-        .json(&message)
+        .header("usersignature", params.usersignature.clone().unwrap())
+        .header("authsignature", params.authsignature.clone())
+        .json(&h)
         .send()
         .await?;
     
