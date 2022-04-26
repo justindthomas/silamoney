@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 use log::error;
-use web3::{
-    types::H160,
-    types::H256
-};
+use web3::types::H160;
 
 use crate::endpoints::entity::*;
 

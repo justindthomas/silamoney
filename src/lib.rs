@@ -23,7 +23,6 @@ use std::convert::TryInto;
 use std::env;
 use std::future::Future;
 use web3::{types::H160, types::H256};
-use serde_json;
 
 pub struct SilaParams {
     pub gateway: String,
