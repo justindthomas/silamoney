@@ -1,23 +1,15 @@
 use serde::{Deserialize, Serialize};
 use log::error;
-use web3::{
-    types::H160,
-    types::H256
-};
+use web3::types::H160;
 
 use crate::endpoints::entity::*;
-
-pub struct RequestKycParams {
-    pub customer_sila_handle: String,
-    pub customer_eth_address: H160,
-    pub customer_private_key: Option<H256>
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestKycResponse {
     pub message: String,
     pub reference: String,
     pub status: Status,
+    pub success: bool,
 }
 
 pub struct RequestKycMessageParams {

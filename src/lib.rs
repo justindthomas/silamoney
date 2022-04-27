@@ -105,7 +105,7 @@ pub struct Signatures {
 #[derive(Copy, Clone)]
 pub struct SignData {
     pub address: [u8; 20],
-    pub data: [u8; 32],
+    pub message_hash: [u8; 32],
     pub private_key: Option<[u8; 32]>,
 }
 
@@ -139,7 +139,7 @@ where
 
 pub async fn default_sign(user_data: Option<SignData>, app_data: SignData) -> Signatures {
     let closure = async move |x: SignData| {
-        let message = secp256k1::Message::from_slice(&x.data).unwrap();
+        let message = secp256k1::Message::from_slice(&x.message_hash).unwrap();
 
         let secret_key = SecretKey::from_slice(&x.private_key.unwrap()).unwrap();
         let secp = Secp256k1::new();

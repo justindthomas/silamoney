@@ -68,9 +68,9 @@ pub async fn register_message(
     message.contact.phone = params.phone.clone();
     message.contact.email = params.email.clone();
 
-    message.crypto_entry.crypto_address = params.ethereum_address.clone().to_string();
+    message.crypto_entry.crypto_address = format!("{:#x}", params.ethereum_address.clone());
     message.crypto_entry.crypto_code = "ETH".to_string();
-
+    
     Ok(serde_json::to_string(&message)?)
 }
 
