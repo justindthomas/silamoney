@@ -12,6 +12,10 @@ pub use endpoints::entity::update::identity::*;
 pub use endpoints::entity::update::phone::*;
 pub use endpoints::entity::*;
 pub use endpoints::wallet::get_sila_balance::*;
+pub use endpoints::transaction::issue_sila::*;
+pub use endpoints::transaction::redeem_sila::*;
+pub use endpoints::transaction::transfer_sila::*;
+pub use endpoints::transaction::cancel_transaction::*;
 
 use eth_checksum;
 use lazy_static::lazy_static;
@@ -68,7 +72,7 @@ pub struct SignedMessageParams {
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Header {
-    pub reference: String,
+    pub reference: Option<String>,
     pub created: i64,
     pub user_handle: String,
     pub auth_handle: String,
