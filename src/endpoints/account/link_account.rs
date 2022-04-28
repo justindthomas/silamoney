@@ -48,7 +48,7 @@ pub async fn link_account_message(
     let sila_params = &*crate::SILA_PARAMS;
 
     let mut message: LinkMessage = link_account_template().await?;
-    message.header.user_handle = params.sila_handle.clone();
+    message.header.user_handle = Option::from(params.sila_handle.clone());
     message.header.auth_handle = sila_params.app_handle.clone();
     message.public_token = params.sila_bank_token.clone();
     message.account_name = params.sila_bank_identifier.clone();

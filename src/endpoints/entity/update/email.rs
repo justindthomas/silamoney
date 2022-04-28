@@ -34,9 +34,9 @@ pub async fn update_email_message(
 ) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
 
-    let header_message: HeaderMessage = header_message().await?;
+    let header_message: HeaderMessage = header_message();
     let mut header = header_message.header.clone();
-    header.user_handle = params.sila_handle.clone();
+    header.user_handle = Option::from(params.sila_handle.clone());
     header.auth_handle = sila_params.app_handle.clone();
 
     let message = UpdateEmailMessage {

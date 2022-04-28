@@ -16,6 +16,7 @@ pub use endpoints::transaction::issue_sila::*;
 pub use endpoints::transaction::redeem_sila::*;
 pub use endpoints::transaction::transfer_sila::*;
 pub use endpoints::transaction::cancel_transaction::*;
+pub use endpoints::transaction::get_transactions::*;
 
 use eth_checksum;
 use lazy_static::lazy_static;
@@ -27,6 +28,8 @@ use std::convert::TryInto;
 use std::env;
 use std::future::Future;
 use web3::{types::H160, types::H256};
+use uuid::Uuid;
+use std::time::SystemTime;
 
 pub struct SilaParams {
     pub gateway: String,
@@ -63,7 +66,7 @@ impl std::fmt::Display for Status {
 
 #[derive(Clone)]
 pub struct SignedMessageParams {
-    pub sila_handle: String,
+    pub sila_handle: Option<String>,
     pub ethereum_address: H160,
     pub message: String,
     pub usersignature: Option<String>,
@@ -72,12 +75,25 @@ pub struct SignedMessageParams {
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Header {
-    pub reference: Option<String>,
-    pub created: i64,
-    pub user_handle: String,
+    pub reference: String,
+    pub created: u64,
+    pub user_handle: Option<String>,
     pub auth_handle: String,
     pub version: String,
     pub crypto: String,
+}
+
+impl Default for Header {
+    fn default() -> Self {
+        Header {
+            reference: Uuid::new_v4().to_string(),
+            created: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).expect("could not calculate current time").as_secs(),
+            user_handle: Option::None,
+            auth_handle: String::new(),
+            version: "0.2".to_string(),
+            crypto: "ETH".to_string()
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -188,16 +204,13 @@ pub struct SignaturesParams {
     pub data: [u8; 32],
 }
 
-pub async fn header_message() -> Result<HeaderMessage, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
-
-    let _url: String = format!(
-        "{}/getmessage?emptymessage=HeaderTestMessage",
-        sila_params.gateway
-    );
-    let resp: HeaderMessage = reqwest::get(&_url.to_owned()).await?.json().await?;
-
-    Ok(resp)
+pub fn header_message() -> HeaderMessage {
+    HeaderMessage {
+        header: Header {
+            ..Default::default()
+        },
+        message: "header_msg".to_string()
+    }
 }
 
 pub struct SignParams {

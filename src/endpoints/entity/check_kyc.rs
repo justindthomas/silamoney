@@ -10,8 +10,8 @@ pub async fn check_kyc_message(
 ) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
 
-    let mut header: HeaderMessage = header_message().await?;
-    header.header.user_handle = params.sila_handle.clone();
+    let mut header: HeaderMessage = header_message();
+    header.header.user_handle = Option::from(params.sila_handle.clone());
     header.header.auth_handle = sila_params.app_handle.clone();
 
     Ok(serde_json::to_string(&header)?)

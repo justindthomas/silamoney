@@ -46,7 +46,7 @@ pub async fn register_message(
     let sila_params = &*crate::SILA_PARAMS;
 
     let mut message: RegisterMessage = register_message_template().await?;
-    message.header.user_handle = params.sila_handle.clone();
+    message.header.user_handle = Option::from(params.sila_handle.clone());
     message.header.auth_handle = sila_params.app_handle.clone();
 
     message.entity.relationship = Option::from("user".to_string());

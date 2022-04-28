@@ -18,3 +18,4 @@ log = "0.4.11"
 web3 = "0.18.0"
 slice_as_array = "1.1.0"
 eth_checksum = "0.1.2"
+uuid = { version = "1.0.0", features = ["serde", "v4"] }

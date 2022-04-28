@@ -73,9 +73,8 @@ pub async fn transfer_sila_message(
     let sila_params = &*crate::SILA_PARAMS;
 
     let mut message: TransferSilaMessage = transfer_sila_template().await?;
-    message.header.user_handle = params.sila_handle.clone();
+    message.header.user_handle = Option::from(params.sila_handle.clone());
     message.header.auth_handle = sila_params.app_handle.clone();
-    message.header.reference = params.reference.clone();
 
     message.message = "transfer_msg".to_string();
     message.amount = params.amount;
