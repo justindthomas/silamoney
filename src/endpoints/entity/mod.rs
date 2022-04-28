@@ -132,8 +132,8 @@ pub struct GetEntityResponse {
 }
 
 pub struct RequestEntityParams {
-    pub customer_sila_handle: String,
-    pub customer_eth_address: H160,
+    pub sila_handle: String,
+    pub ethereum_address: H160,
     pub private_key: Option<H256>,
 }
 

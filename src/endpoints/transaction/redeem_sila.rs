@@ -52,7 +52,6 @@ pub async fn redeem_sila_template(
 pub struct RedeemSilaMessageParams {
     pub sila_handle: String,
     pub ethereum_address: H160,
-    pub reference: Option<String>,
     pub amount: i32,
     pub account_name: Option<String>,
     pub descriptor: Option<String>,
@@ -65,7 +64,6 @@ impl Default for RedeemSilaMessageParams {
         RedeemSilaMessageParams {
             sila_handle: String::new(),
             ethereum_address: H160::zero(),
-            reference: Option::None,
             amount: 0,
             account_name: Option::from("default".to_string()),
             descriptor: Option::None,

@@ -14,24 +14,22 @@ pub struct CancelTransactionMessage {
 }
 
 pub struct CancelTransactionMessageParams {
-    pub sila_handle: Option<String>,
+    pub sila_handle: String,
     pub ethereum_address: H160,
-    pub reference: Option<String>,
     pub transaction_id: String
 }
 
 impl Default for CancelTransactionMessageParams {
     fn default() -> Self {
         CancelTransactionMessageParams {
-            sila_handle: Option::from(String::new()),
+            sila_handle: String::new(),
             ethereum_address: H160::zero(),
-            reference: Option::None,
             transaction_id: String::new()
         }
     }
 }
 
-pub async fn transfer_sila_message(
+pub async fn cancel_transaction_message(
     params: &CancelTransactionMessageParams,
 ) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
@@ -43,7 +41,7 @@ pub async fn transfer_sila_message(
         transaction_id: params.transaction_id.clone()
     };
 
-    message.header.user_handle = params.sila_handle.clone();
+    message.header.user_handle = Option::from(params.sila_handle.clone());
     message.header.auth_handle = sila_params.app_handle.clone();
 
     Ok(serde_json::to_string(&message)?)

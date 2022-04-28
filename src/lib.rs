@@ -67,7 +67,7 @@ impl std::fmt::Display for Status {
 #[derive(Clone)]
 pub struct SignedMessageParams {
     pub sila_handle: Option<String>,
-    pub ethereum_address: H160,
+    pub ethereum_address: Option<H160>,
     pub message: String,
     pub usersignature: Option<String>,
     pub authsignature: String,

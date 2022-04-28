@@ -13,7 +13,7 @@ pub struct RequestKycResponse {
 }
 
 pub struct RequestKycMessageParams {
-    pub sila_handle: Option<String>,
+    pub sila_handle: String,
     pub ethereum_address: H160,
 }
 
@@ -23,7 +23,7 @@ pub async fn request_kyc_message(
     let sila_params = &*crate::SILA_PARAMS;
 
     let mut header: HeaderMessage = header_message();
-    header.header.user_handle = params.sila_handle.clone();
+    header.header.user_handle = Option::from(params.sila_handle.clone());
     header.header.auth_handle = sila_params.app_handle.clone();
 
     Ok(serde_json::to_string(&header)?)

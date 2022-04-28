@@ -4,7 +4,6 @@ use crate::HeaderMessage;
 use crate::IssueProcessingType;
 use log::error;
 use serde::{Deserialize, Serialize};
-use web3::types::H160;
 
 use crate::{SignedMessageParams, Status};
 
@@ -89,7 +88,6 @@ pub struct GetTransactionsMessage {
 
 pub struct GetTransactionsMessageParams {
     pub sila_handle: Option<String>,
-    pub ethereum_address: H160,
     pub reference: Option<String>,
     pub search_filters: Option<TransactionSearchFilters>,
 }
@@ -98,7 +96,6 @@ impl Default for GetTransactionsMessageParams {
     fn default() -> Self {
         GetTransactionsMessageParams {
             sila_handle: Option::from(String::new()),
-            ethereum_address: H160::zero(),
             reference: Option::None,
             search_filters: Option::from(TransactionSearchFilters {
                 ..Default::default()
