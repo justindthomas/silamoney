@@ -8,6 +8,52 @@ use serde::{Deserialize, Serialize};
 use crate::{SignedMessageParams, Status};
 
 #[derive(Deserialize, Serialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum TransactionType {
+    Issue,
+    Redeem,
+    Transfer,
+}
+
+impl std::fmt::Display for TransactionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            TransactionType::Issue => write!(f, "issue"),
+            TransactionType::Redeem => write!(f, "redeem"),
+            TransactionType::Transfer => write!(f, "transfer"),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum TransactionStatus {
+    Queued,
+    Pending,
+    PendingConfirmation,
+    Reversed,
+    Failed,
+    Success,
+    Rollback,
+    Review,
+}
+
+impl std::fmt::Display for TransactionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            TransactionStatus::Queued => write!(f, "queued"),
+            TransactionStatus::Pending => write!(f, "pending"),
+            TransactionStatus::PendingConfirmation => write!(f, "pending_confirmation"),
+            TransactionStatus::Reversed => write!(f, "reversed"),
+            TransactionStatus::Failed => write!(f, "failed"),
+            TransactionStatus::Success => write!(f, "success"),
+            TransactionStatus::Rollback => write!(f, "rollback"),
+            TransactionStatus::Review => write!(f, "review"),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone)]
 pub struct TransactionSearchFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub transaction_id: Option<String>,
@@ -22,7 +68,7 @@ pub struct TransactionSearchFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub min_sila_amount: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub statuses: Option<Vec<String>>,
+    pub statuses: Option<Vec<TransactionStatus>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub start_epoch: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -32,7 +78,7 @@ pub struct TransactionSearchFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub per_page: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub transaction_types: Option<Vec<String>>,
+    pub transaction_types: Option<Vec<TransactionType>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bank_account_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -53,23 +99,23 @@ impl Default for TransactionSearchFilters {
             max_sila_amount: Option::None,
             min_sila_amount: Option::None,
             statuses: Option::from(vec![
-                "queued".to_string(),
-                "pending".to_string(),
-                "pending_confirmation".to_string(),
-                "reversed".to_string(),
-                "failed".to_string(),
-                "success".to_string(),
-                "rollback".to_string(),
-                "review".to_string(),
+                TransactionStatus::Queued,
+                TransactionStatus::Pending,
+                TransactionStatus::PendingConfirmation,
+                TransactionStatus::Reversed,
+                TransactionStatus::Failed,
+                TransactionStatus::Success,
+                TransactionStatus::Rollback,
+                TransactionStatus::Review,
             ]),
             start_epoch: Option::None,
             end_epoch: Option::None,
             page: Option::from(1),
             per_page: Option::from(20),
             transaction_types: Option::from(vec![
-                "issue".to_string(),
-                "redeem".to_string(),
-                "transfer".to_string(),
+                TransactionType::Issue,
+                TransactionType::Redeem,
+                TransactionType::Transfer,
             ]),
             bank_account_name: Option::None,
             blockchain_address: Option::None,
@@ -138,9 +184,9 @@ pub struct Transaction {
     pub reference_id: Option<String>,
     pub transaction_id: Option<String>,
     pub transaction_hash: Option<String>,
-    pub transaction_type: Option<String>,
+    pub transaction_type: Option<TransactionType>,
     pub sila_amount: Option<i32>,
-    pub status: Option<String>,
+    pub status: Option<TransactionStatus>,
     pub usd_status: Option<String>,
     pub token_status: Option<String>,
     pub created: Option<String>,
@@ -169,12 +215,28 @@ pub struct Transaction {
     pub timeline: Option<Vec<TransactionTimelineItem>>,
 }
 
+impl std::fmt::Display for Transaction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Transaction (reference_id: {}, user_handle: {}, transaction_type: {}, sila_amount: {})", 
+            self.reference_id.clone().unwrap(), 
+            self.user_handle.clone().unwrap(), 
+            self.transaction_type.clone().unwrap(), 
+            self.sila_amount.unwrap() )
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct TransactionPagination {
     pub returned_count: Option<i32>,
     pub total_count: Option<i32>,
     pub current_page: Option<i32>,
     pub total_pages: Option<i32>,
+}
+
+impl std::fmt::Display for TransactionPagination {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", serde_json::to_string(self).unwrap())
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -188,6 +250,12 @@ pub struct GetTransactionsResponse {
     pub total_count: Option<i32>,
     pub pagination: Option<TransactionPagination>,
     pub transactions: Option<Vec<Transaction>>,
+}
+
+impl std::fmt::Display for GetTransactionsResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", serde_json::to_string(self).unwrap())
+    }
 }
 
 pub async fn get_transactions(
@@ -228,7 +296,7 @@ pub async fn get_transactions(
 
     match response {
         Ok(x) if x.status == Status::FAILURE => {
-            error!("cancel_transaction failure: {}", response_text);
+            error!("get_transactions failure: {}", response_text);
             Ok(x)
         }
         Ok(x) => Ok(x),

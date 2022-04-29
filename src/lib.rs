@@ -11,25 +11,24 @@ pub use endpoints::entity::update::email::*;
 pub use endpoints::entity::update::identity::*;
 pub use endpoints::entity::update::phone::*;
 pub use endpoints::entity::*;
-pub use endpoints::wallet::get_sila_balance::*;
+pub use endpoints::transaction::cancel_transaction::*;
+pub use endpoints::transaction::get_transactions::*;
 pub use endpoints::transaction::issue_sila::*;
 pub use endpoints::transaction::redeem_sila::*;
 pub use endpoints::transaction::transfer_sila::*;
-pub use endpoints::transaction::cancel_transaction::*;
-pub use endpoints::transaction::get_transactions::*;
+pub use endpoints::wallet::get_sila_balance::*;
 
 use eth_checksum;
 use lazy_static::lazy_static;
-use reqwest;
 use secp256k1::{Secp256k1, SecretKey};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
 use std::convert::TryInto;
 use std::env;
 use std::future::Future;
-use web3::{types::H160, types::H256};
-use uuid::Uuid;
 use std::time::SystemTime;
+use uuid::Uuid;
+use web3::{types::H160, types::H256};
 
 pub struct SilaParams {
     pub gateway: String,
@@ -87,11 +86,14 @@ impl Default for Header {
     fn default() -> Self {
         Header {
             reference: Uuid::new_v4().to_string(),
-            created: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).expect("could not calculate current time").as_secs(),
+            created: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .expect("could not calculate current time")
+                .as_secs(),
             user_handle: Option::None,
             auth_handle: String::new(),
             version: "0.2".to_string(),
-            crypto: "ETH".to_string()
+            crypto: "ETH".to_string(),
         }
     }
 }
@@ -209,7 +211,7 @@ pub fn header_message() -> HeaderMessage {
         header: Header {
             ..Default::default()
         },
-        message: "header_msg".to_string()
+        message: "header_msg".to_string(),
     }
 }
 
