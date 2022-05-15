@@ -33,12 +33,12 @@ pub async fn get_sila_balance(params: &RequestSilaBalanceParams) -> Result<SilaB
 
     match response {
         Ok(x) if x.success != true => {
-            error!("get_sila_balance API Error: String({})", response_text);
+            error!("get_sila_balance error: {}", response_text);
             Ok(x)
         },
         Ok(x) => Ok(x),
         Err(e) => {
-            error!("JSON Decoding Error: String({})", response_text);
+            error!("get_sila_balance response error: {}", response_text);
             Err(Box::from(e))
         }
     }

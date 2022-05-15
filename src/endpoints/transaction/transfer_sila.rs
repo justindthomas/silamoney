@@ -1,9 +1,8 @@
-use crate::Header;
 use log::error;
 use serde::{Deserialize, Serialize};
 use web3::types::H160;
 
-use crate::{SignedMessageParams, Status};
+use crate::{header_message, Header, HeaderMessage, SignedMessageParams, Status};
 
 #[derive(Deserialize, Serialize)]
 pub struct TransferSilaMessage {
@@ -21,20 +20,6 @@ pub struct TransferSilaMessage {
     pub source_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub destination_id: Option<String>,
-}
-
-pub async fn transfer_sila_template(
-) -> Result<TransferSilaMessage, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
-
-    let _url: String = format!(
-        "{}/getmessage?emptymessage=TransferTestMessage",
-        sila_params.gateway
-    );
-
-    let resp: TransferSilaMessage = reqwest::get(&_url.to_owned()).await?.json().await?;
-
-    Ok(resp)
 }
 
 pub struct TransferSilaMessageParams {
@@ -70,18 +55,21 @@ pub async fn transfer_sila_message(
 ) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
 
-    let mut message: TransferSilaMessage = transfer_sila_template().await?;
-    message.header.user_handle = Option::from(params.sila_handle.clone());
-    message.header.auth_handle = sila_params.app_handle.clone();
+    let mut header_message: HeaderMessage = header_message();
+    header_message.header.user_handle = Option::from(params.sila_handle.clone());
+    header_message.header.auth_handle = sila_params.app_handle.clone();
 
-    message.message = "transfer_msg".to_string();
-    message.amount = params.amount;
-    message.descriptor = params.descriptor.clone();
-    message.destination_handle = params.destination_handle.clone();
-    message.destination_address = params.destination_address.clone();
-    message.destination_wallet = params.destination_wallet.clone();
-    message.destination_id = params.destination_id.clone();
-    message.source_id = params.source_id.clone();
+    let message = TransferSilaMessage {
+        header: header_message.header,
+        message: "transfer_msg".to_string(),
+        amount: params.amount,
+        descriptor: params.descriptor.clone(),
+        destination_handle: params.destination_handle.clone(),
+        destination_address: params.destination_address.clone(),
+        destination_wallet: params.destination_wallet.clone(),
+        destination_id: params.destination_id.clone(),
+        source_id: params.source_id.clone(),
+    };
 
     Ok(serde_json::to_string(&message)?)
 }
@@ -119,15 +107,12 @@ pub async fn transfer_sila(
 
     match response {
         Ok(x) if x.status == Status::FAILURE => {
-            error!("transfer_sila failure: {}", response_text);
+            error!("transfer_sila error: {}", response_text);
             Ok(x)
         }
         Ok(x) => Ok(x),
         Err(e) => {
-            error!(
-                "JSON decoding failure in transfer_sila response: {}",
-                response_text
-            );
+            error!("transfer_sila response error: {}", response_text);
             Err(Box::from(e))
         }
     }

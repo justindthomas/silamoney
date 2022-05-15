@@ -38,6 +38,24 @@ pub struct Address {
     pub country: Option<String>,
 }
 
+impl Default for Address {
+    fn default() -> Self { 
+        Address {  
+            added_epoch: Option::None,
+            modified_epoch: Option::None,
+            nickname: Option::None,
+            uuid: Option::None,
+            address_alias: Option::None,
+            street_address_1: Option::None,
+            street_address_2: Option::None,
+            city: Option::None,
+            state: Option::None,
+            postal_code: Option::None,
+            country: Option::None 
+        } 
+    } 
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct Identity {
     pub identity_alias: String,
@@ -54,7 +72,8 @@ pub struct Contact {
 #[derive(Deserialize, Serialize)]
 pub struct CryptoEntry {
     pub crypto_alias: String,
-    pub crypto_status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub crypto_status: Option<String>,
     pub crypto_address: String,
     pub crypto_code: String,
 }

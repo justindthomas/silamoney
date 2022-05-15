@@ -50,12 +50,12 @@ pub async fn request_kyc(params: &SignedMessageParams) -> Result<RequestKycRespo
 
     match response {
         Ok(x) if x.status == Status::FAILURE => {
-            error!("general request_kyc error | text: {}", response_text);
+            error!("request_kyc error: {}", response_text);
             Ok(x)
         },
         Ok(x) => Ok(x),
         Err(e) => {
-            error!("decoding error | text: {}", response_text);
+            error!("request_kyc response error: {}", response_text);
             Err(Box::from(e))
         }
     }
