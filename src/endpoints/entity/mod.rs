@@ -3,10 +3,7 @@ pub mod register;
 pub mod request_kyc;
 pub mod update;
 
-use crate::{
-    header_message, Header, HeaderMessage,
-    SignedMessageParams, Status,
-};
+use crate::{header_message, HeaderMessage, SignedMessageParams, Status};
 
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -39,8 +36,8 @@ pub struct Address {
 }
 
 impl Default for Address {
-    fn default() -> Self { 
-        Address {  
+    fn default() -> Self {
+        Address {
             added_epoch: Option::None,
             modified_epoch: Option::None,
             nickname: Option::None,
@@ -51,9 +48,9 @@ impl Default for Address {
             city: Option::None,
             state: Option::None,
             postal_code: Option::None,
-            country: Option::None 
-        } 
-    } 
+            country: Option::None,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize)]
