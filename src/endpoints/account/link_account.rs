@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
 use log::error;
+use serde::{Deserialize, Serialize};
 
-use crate::{Header, SignedMessageParams, Status, header_message, HeaderMessage};
+use crate::{header_message, Header, HeaderMessage, SignedMessageParams, Status};
 
 #[derive(Clone)]
 pub struct LinkMessageParams {
@@ -31,6 +31,23 @@ pub struct LinkMessage {
     pub selected_account_id: String,
 }
 
+impl From<LinkMessageParams> for LinkMessage {
+    fn from(params: LinkMessageParams) -> Self {
+        let sila_params = &*crate::SILA_PARAMS;
+
+        let mut header: HeaderMessage = header_message();
+        header.header.user_handle = Option::from(params.sila_handle.clone());
+        header.header.auth_handle = sila_params.app_handle.clone();
+        
+        LinkMessage {
+            header: header.header,
+            plaid_token: params.sila_bank_token.clone(),
+            account_name: "Friendowment Default".to_string(),
+            selected_account_id: params.selected_account_id.clone(),
+        }
+    }
+}
+
 #[derive(Deserialize)]
 pub struct LinkResponse {
     pub success: bool,
@@ -39,29 +56,13 @@ pub struct LinkResponse {
     pub status: Status,
     pub account_name: Option<String>,
     pub match_score: Option<f32>,
-    pub web_debit_verified: Option<bool>
+    pub web_debit_verified: Option<bool>,
 }
 
-pub async fn link_account_message(params: &LinkMessageParams) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
+pub async fn link_account(
+    params: &SignedMessageParams,
+) -> Result<LinkResponse, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
-
-    let mut header: HeaderMessage = header_message();
-    header.header.user_handle = Option::from(params.sila_handle.clone());
-    header.header.auth_handle = sila_params.app_handle.clone();
-
-    let message = LinkMessage {
-        header: header.header,
-        plaid_token: params.sila_bank_token.clone(),
-        account_name: "Friendowment Default".to_string(),
-        selected_account_id: params.selected_account_id.clone()
-    };
-
-    Ok(serde_json::to_string(&message)?)
-}
-
-pub async fn link_account(params: &SignedMessageParams) -> Result<LinkResponse, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
-    
     let _url: String = format!("{}/link_account", sila_params.gateway);
 
     let h: LinkMessage = serde_json::from_str(&params.message.clone()).unwrap();
@@ -76,13 +77,13 @@ pub async fn link_account(params: &SignedMessageParams) -> Result<LinkResponse, 
         .await?;
 
     let response_text = resp.text().await?;
-    let response : Result<LinkResponse, serde_json::Error> = serde_json::from_str(&response_text);
+    let response: Result<LinkResponse, serde_json::Error> = serde_json::from_str(&response_text);
 
     match response {
         Ok(x) if x.status == Status::FAILURE => {
             error!("link_account error: {}", response_text);
             Ok(x)
-        },
+        }
         Ok(x) => Ok(x),
         Err(e) => {
             error!("link_account response error: {}", response_text);

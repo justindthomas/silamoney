@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use log::error;
+use serde::{Deserialize, Serialize};
 use web3::types::H160;
 
 use crate::endpoints::entity::*;
@@ -12,24 +12,27 @@ pub struct RequestKycResponse {
     pub success: bool,
 }
 
+#[derive(Clone)]
 pub struct RequestKycMessageParams {
     pub sila_handle: String,
     pub ethereum_address: H160,
 }
 
-pub async fn request_kyc_message(
-    params: &RequestKycMessageParams,
-) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
+impl From<RequestKycMessageParams> for HeaderMessage {
+    fn from(params: RequestKycMessageParams) -> Self {
+        let sila_params = &*crate::SILA_PARAMS;
 
-    let mut header: HeaderMessage = header_message();
-    header.header.user_handle = Option::from(params.sila_handle.clone());
-    header.header.auth_handle = sila_params.app_handle.clone();
+        let mut header: HeaderMessage = header_message();
+        header.header.user_handle = Option::from(params.sila_handle.clone());
+        header.header.auth_handle = sila_params.app_handle.clone();
 
-    Ok(serde_json::to_string(&header)?)
+        header
+    }
 }
 
-pub async fn request_kyc(params: &SignedMessageParams) -> Result<RequestKycResponse, Box<dyn std::error::Error + Sync + Send>> {
+pub async fn request_kyc(
+    params: &SignedMessageParams,
+) -> Result<RequestKycResponse, Box<dyn std::error::Error + Sync + Send>> {
     let sila_params = &*crate::SILA_PARAMS;
 
     let _url: String = format!("{}/request_kyc", sila_params.gateway);
@@ -44,15 +47,15 @@ pub async fn request_kyc(params: &SignedMessageParams) -> Result<RequestKycRespo
         .json(&h)
         .send()
         .await?;
-    
     let response_text = resp.text().await?;
-    let response : Result<RequestKycResponse, serde_json::Error> = serde_json::from_str(&response_text);
+    let response: Result<RequestKycResponse, serde_json::Error> =
+        serde_json::from_str(&response_text);
 
     match response {
         Ok(x) if x.status == Status::FAILURE => {
             error!("request_kyc error: {}", response_text);
             Ok(x)
-        },
+        }
         Ok(x) => Ok(x),
         Err(e) => {
             error!("request_kyc response error: {}", response_text);

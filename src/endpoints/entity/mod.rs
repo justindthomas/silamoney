@@ -153,20 +153,21 @@ pub struct RequestEntityParams {
     pub private_key: Option<H256>,
 }
 
+#[derive(Clone)]
 pub struct RequestEntityMessageParams {
     pub sila_handle: String,
 }
 
-pub async fn get_entity_message(
-    params: &RequestEntityMessageParams,
-) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
+impl From<RequestEntityMessageParams> for HeaderMessage {
+    fn from(params: RequestEntityMessageParams) -> Self {
+        let sila_params = &*crate::SILA_PARAMS;
 
-    let mut message: HeaderMessage = header_message();
-    message.header.user_handle = Option::from(params.sila_handle.clone());
-    message.header.auth_handle = sila_params.app_handle.clone();
+        let mut header: HeaderMessage = header_message();
+        header.header.user_handle = Option::from(params.sila_handle.clone());
+        header.header.auth_handle = sila_params.app_handle.clone();
 
-    Ok(serde_json::to_string(&message)?)
+        header
+    }
 }
 
 pub async fn get_entity(

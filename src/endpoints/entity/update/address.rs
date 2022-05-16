@@ -34,6 +34,7 @@ pub struct UpdateAddressMessage {
     pub country: Option<String>
 }
 
+#[derive(Clone)]
 pub struct UpdateAddressMessageParams {
     pub sila_handle: String,
     pub ethereum_address: H160,
@@ -64,29 +65,26 @@ impl Default for UpdateAddressMessageParams {
     } 
 }
 
-pub async fn update_address_message(
-    params: &UpdateAddressMessageParams,
-) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
+impl From<UpdateAddressMessageParams> for UpdateAddressMessage {
+    fn from(params: UpdateAddressMessageParams) -> Self {
+        let sila_params = &*crate::SILA_PARAMS;
 
-    let header_message: HeaderMessage = header_message();
-    let mut header = header_message.header.clone();
-    header.user_handle = Option::from(params.sila_handle.clone());
-    header.auth_handle = sila_params.app_handle.clone();
+        let mut header_message: HeaderMessage = header_message();
+        header_message.header.user_handle = Option::from(params.sila_handle.clone());
+        header_message.header.auth_handle = sila_params.app_handle.clone();
 
-    let message = UpdateAddressMessage {
-        header: header,
-        uuid: params.uuid.clone(),
-        address_alias: params.address_alias.clone(),
-        street_address_1: params.street_address_1.clone(),
-        street_address_2: params.street_address_2.clone(),
-        city: params.city.clone(),
-        state: params.state.clone(),
-        postal_code: params.postal_code.clone(),
-        country: params.country.clone()
-    };
-
-    Ok(serde_json::to_string(&message)?)
+        UpdateAddressMessage {
+            header: header_message.header,
+            uuid: params.uuid.clone(),
+            address_alias: params.address_alias.clone(),
+            street_address_1: params.street_address_1.clone(),
+            street_address_2: params.street_address_2.clone(),
+            city: params.city.clone(),
+            state: params.state.clone(),
+            postal_code: params.postal_code.clone(),
+            country: params.country.clone()
+        }
+    }
 }
 
 pub async fn update_address(params: &SignedMessageParams) -> Result<UpdateAddressResponse, Box<dyn std::error::Error + Sync + Send>> {

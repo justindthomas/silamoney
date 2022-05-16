@@ -35,6 +35,7 @@ pub struct RedeemSilaMessage {
     pub processing_type: Option<RedeemProcessingType>,
 }
 
+#[derive(Clone)]
 pub struct RedeemSilaMessageParams {
     pub sila_handle: String,
     pub ethereum_address: H160,
@@ -43,6 +44,7 @@ pub struct RedeemSilaMessageParams {
     pub descriptor: Option<String>,
     pub business_uuid: Option<String>,
     pub processing_type: Option<RedeemProcessingType>,
+    pub reference: Option<String>,
 }
 
 impl Default for RedeemSilaMessageParams {
@@ -55,30 +57,33 @@ impl Default for RedeemSilaMessageParams {
             descriptor: Option::None,
             business_uuid: Option::None,
             processing_type: Option::from(RedeemProcessingType::StandardAch),
+            reference: Option::None
         }
     }
 }
 
-pub async fn redeem_sila_message(
-    params: &RedeemSilaMessageParams,
-) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
+impl From<RedeemSilaMessageParams> for RedeemSilaMessage {
+    fn from(params: RedeemSilaMessageParams) -> Self {
+        let sila_params = &*crate::SILA_PARAMS;
 
-    let mut header_message: HeaderMessage = header_message();
-    header_message.header.user_handle = Option::from(params.sila_handle.clone());
-    header_message.header.auth_handle = sila_params.app_handle.clone();
+        let mut header_message: HeaderMessage = header_message();
+        header_message.header.user_handle = Option::from(params.sila_handle.clone());
+        header_message.header.auth_handle = sila_params.app_handle.clone();
 
-    let message = RedeemSilaMessage {
-        header: header_message.header,
-        message: "redeem_msg".to_string(),
-        amount: params.amount,
-        account_name: params.account_name.clone(),
-        descriptor: params.descriptor.clone(),
-        business_uuid: params.business_uuid.clone(),
-        processing_type: params.processing_type.clone(),
-    };
+        if params.reference.is_some() {
+            header_message.header.reference = params.reference.unwrap();
+        }
 
-    Ok(serde_json::to_string(&message)?)
+        RedeemSilaMessage {
+            header: header_message.header,
+            message: "redeem_msg".to_string(),
+            amount: params.amount,
+            account_name: params.account_name.clone(),
+            descriptor: params.descriptor.clone(),
+            business_uuid: params.business_uuid.clone(),
+            processing_type: params.processing_type.clone(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -89,6 +94,17 @@ pub struct RedeemSilaResponse {
     pub success: bool,
     pub transaction_id: Option<String>,
     pub descriptor: Option<String>,
+}
+
+impl std::fmt::Display for RedeemSilaResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RedeemSilaResponse(message: {}, reference: {}, transaction_id: {}, status: {})",
+            self.message,
+            self.reference.as_ref().unwrap_or(&"none".to_string()),
+            self.transaction_id.as_ref().unwrap_or(&"none".to_string()),
+            self.status
+        )
+    }
 }
 
 pub async fn redeem_sila(

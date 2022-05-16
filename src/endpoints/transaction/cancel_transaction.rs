@@ -1,6 +1,6 @@
 use crate::header_message;
-use crate::HeaderMessage;
 use crate::Header;
+use crate::HeaderMessage;
 use log::error;
 use serde::{Deserialize, Serialize};
 use web3::types::H160;
@@ -16,7 +16,8 @@ pub struct CancelTransactionMessage {
 pub struct CancelTransactionMessageParams {
     pub sila_handle: String,
     pub ethereum_address: H160,
-    pub transaction_id: String
+    pub transaction_id: String,
+    pub reference: Option<String>
 }
 
 impl Default for CancelTransactionMessageParams {
@@ -24,27 +25,29 @@ impl Default for CancelTransactionMessageParams {
         CancelTransactionMessageParams {
             sila_handle: String::new(),
             ethereum_address: H160::zero(),
-            transaction_id: String::new()
+            transaction_id: String::new(),
+            reference: Option::None,
         }
     }
 }
 
-pub async fn cancel_transaction_message(
-    params: &CancelTransactionMessageParams,
-) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
+impl From<CancelTransactionMessageParams> for CancelTransactionMessage {
+    fn from(params: CancelTransactionMessageParams) -> Self {
+        let sila_params = &*crate::SILA_PARAMS;
 
-    let header_message: HeaderMessage = header_message();
+        let mut header_message: HeaderMessage = header_message();
+        header_message.header.user_handle = Option::from(params.sila_handle.clone());
+        header_message.header.auth_handle = sila_params.app_handle.clone();
 
-    let mut message = CancelTransactionMessage {
-        header: header_message.header,
-        transaction_id: params.transaction_id.clone()
-    };
+        if params.reference.is_some() {
+            header_message.header.reference = params.reference.unwrap();
+        }
 
-    message.header.user_handle = Option::from(params.sila_handle.clone());
-    message.header.auth_handle = sila_params.app_handle.clone();
-
-    Ok(serde_json::to_string(&message)?)
+        CancelTransactionMessage {
+            header: header_message.header,
+            transaction_id: params.transaction_id,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]

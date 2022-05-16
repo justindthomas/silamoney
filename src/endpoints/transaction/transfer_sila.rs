@@ -1,6 +1,5 @@
 use log::error;
 use serde::{Deserialize, Serialize};
-use web3::types::H160;
 
 use crate::{header_message, Header, HeaderMessage, SignedMessageParams, Status};
 
@@ -22,9 +21,9 @@ pub struct TransferSilaMessage {
     pub destination_id: Option<String>,
 }
 
+#[derive(Clone)]
 pub struct TransferSilaMessageParams {
     pub sila_handle: String,
-    pub ethereum_address: H160,
     pub amount: i32,
     pub descriptor: Option<String>,
     pub destination_handle: String,
@@ -32,13 +31,13 @@ pub struct TransferSilaMessageParams {
     pub destination_wallet: Option<String>,
     pub destination_id: Option<String>,
     pub source_id: Option<String>,
+    pub reference: Option<String>,
 }
 
 impl Default for TransferSilaMessageParams {
     fn default() -> Self {
         TransferSilaMessageParams {
             sila_handle: String::new(),
-            ethereum_address: H160::zero(),
             amount: 0,
             descriptor: Option::None,
             destination_handle: String::new(),
@@ -46,32 +45,35 @@ impl Default for TransferSilaMessageParams {
             destination_wallet: Option::None,
             destination_id: Option::None,
             source_id: Option::None,
+            reference: Option::None,
         }
     }
 }
 
-pub async fn transfer_sila_message(
-    params: &TransferSilaMessageParams,
-) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
+impl From<TransferSilaMessageParams> for TransferSilaMessage {
+    fn from(params: TransferSilaMessageParams) -> Self {
+        let sila_params = &*crate::SILA_PARAMS;
 
-    let mut header_message: HeaderMessage = header_message();
-    header_message.header.user_handle = Option::from(params.sila_handle.clone());
-    header_message.header.auth_handle = sila_params.app_handle.clone();
+        let mut header_message: HeaderMessage = header_message();
+        header_message.header.user_handle = Option::from(params.sila_handle.clone());
+        header_message.header.auth_handle = sila_params.app_handle.clone();
 
-    let message = TransferSilaMessage {
-        header: header_message.header,
-        message: "transfer_msg".to_string(),
-        amount: params.amount,
-        descriptor: params.descriptor.clone(),
-        destination_handle: params.destination_handle.clone(),
-        destination_address: params.destination_address.clone(),
-        destination_wallet: params.destination_wallet.clone(),
-        destination_id: params.destination_id.clone(),
-        source_id: params.source_id.clone(),
-    };
+        if params.reference.is_some() {
+            header_message.header.reference = params.reference.unwrap();
+        }
 
-    Ok(serde_json::to_string(&message)?)
+        TransferSilaMessage {
+            header: header_message.header,
+            message: "transfer_msg".to_string(),
+            amount: params.amount,
+            descriptor: params.descriptor.clone(),
+            destination_handle: params.destination_handle.clone(),
+            destination_address: params.destination_address.clone(),
+            destination_wallet: params.destination_wallet.clone(),
+            destination_id: params.destination_id.clone(),
+            source_id: params.source_id.clone(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -82,6 +84,17 @@ pub struct TransferSilaResponse {
     pub success: bool,
     pub transaction_id: Option<String>,
     pub descriptor: Option<String>,
+}
+
+impl std::fmt::Display for TransferSilaResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TransferSilaResponse(message: {}, reference: {}, transaction_id: {}, status: {})",
+            self.message,
+            self.reference.as_ref().unwrap_or(&"none".to_string()),
+            self.transaction_id.as_ref().unwrap_or(&"none".to_string()),
+            self.status
+        )
+    }
 }
 
 pub async fn transfer_sila(

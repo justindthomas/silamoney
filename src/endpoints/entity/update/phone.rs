@@ -6,6 +6,7 @@ use web3::{
 use crate::{header_message, Header, HeaderMessage, SignedMessageParams };
 use crate::endpoints::entity::*;
 
+#[derive(Clone)]
 pub struct UpdatePhoneMessageParams {
     pub sila_handle: String,
     pub ethereum_address: H160,
@@ -34,24 +35,21 @@ pub struct UpdatePhoneMessage {
     pub sms_opt_in: Option<bool>
 }
 
-pub async fn update_phone_message(
-    params: &UpdatePhoneMessageParams,
-) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
+impl From<UpdatePhoneMessageParams> for UpdatePhoneMessage {
+    fn from(params: UpdatePhoneMessageParams) -> Self {
+        let sila_params = &*crate::SILA_PARAMS;
 
-    let header_message: HeaderMessage = header_message();
-    let mut header = header_message.header.clone();
-    header.user_handle = Option::from(params.sila_handle.clone());
-    header.auth_handle = sila_params.app_handle.clone();
+        let mut header_message: HeaderMessage = header_message();
+        header_message.header.user_handle = Option::from(params.sila_handle.clone());
+        header_message.header.auth_handle = sila_params.app_handle.clone();
 
-    let message = UpdatePhoneMessage {
-        header: header,
-        uuid: params.uuid.clone(),
-        phone: params.email.clone(),
-        sms_opt_in: params.sms_opt_in.clone()
-    };
-
-    Ok(serde_json::to_string(&message)?)
+        UpdatePhoneMessage {
+            header: header_message.header,
+            uuid: params.uuid.clone(),
+            phone: params.email.clone(),
+            sms_opt_in: params.sms_opt_in.clone()
+        }
+    }
 }
 
 pub async fn update_phone(params: &SignedMessageParams) -> Result<UpdatePhoneResponse, Box<dyn std::error::Error + Sync + Send>> {

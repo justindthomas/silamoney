@@ -16,6 +16,7 @@ pub struct RegisterMessage {
     pub entity: Entity,
 }
 
+#[derive(Clone)]
 pub struct RegisterMessageParams {
     pub sila_handle: String,
     pub ethereum_address: H160,
@@ -31,51 +32,50 @@ pub struct RegisterMessageParams {
     pub ssn: String,
 }
 
-pub async fn register_message(
-    params: &RegisterMessageParams,
-) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
+impl From<RegisterMessageParams> for RegisterMessage {
+    fn from(params: RegisterMessageParams) -> Self {
+        let sila_params = &*crate::SILA_PARAMS;
 
-    let mut header_message: HeaderMessage = header_message();
-    header_message.header.user_handle = Option::from(params.sila_handle.clone());
-    header_message.header.auth_handle = sila_params.app_handle.clone();
+        let mut header_message: HeaderMessage = header_message();
+        header_message.header.user_handle = Option::from(params.sila_handle.clone());
+        header_message.header.auth_handle = sila_params.app_handle.clone();
 
-    let message = RegisterMessage {
-        header: header_message.header,
-        entity: Entity {
-            relationship: Option::from("user".to_string()),
-            entity_name: "default".to_string(),
-            first_name: params.first_name.clone(),
-            last_name: params.last_name.clone(),
-            birthdate: params.birthdate.clone(),
-        },
-        address: Address {
-            address_alias: Option::from("default".to_string()),
-            street_address_1: Option::from(params.street_address_1.clone()),
-            city: Option::from(params.city.clone()),
-            state: Option::from(params.state.clone()),
-            postal_code: Option::from(params.postal_code.clone()),
-            country: Option::from("US".to_string()),
-            ..Default::default()
-        },
-        identity: Identity {
-            identity_alias: "ssn".to_string(),
-            identity_value: params.ssn.clone(),
-        },
-        contact: Contact {
-            contact_alias: "default".to_string(),
-            phone: params.phone.clone(),
-            email: params.email.clone(),
-        },
-        crypto_entry: CryptoEntry {
-            crypto_alias: "default".to_string(),
-            crypto_status: Option::None,
-            crypto_address: format!("{:#x}", params.ethereum_address.clone()),
-            crypto_code: "ETH".to_string(),
-        },
-        message: "entity_msg".to_string(),
-    };
-    Ok(serde_json::to_string(&message)?)
+        RegisterMessage {
+            header: header_message.header,
+            entity: Entity {
+                relationship: Option::from("user".to_string()),
+                entity_name: "default".to_string(),
+                first_name: params.first_name.clone(),
+                last_name: params.last_name.clone(),
+                birthdate: params.birthdate.clone(),
+            },
+            address: Address {
+                address_alias: Option::from("default".to_string()),
+                street_address_1: Option::from(params.street_address_1.clone()),
+                city: Option::from(params.city.clone()),
+                state: Option::from(params.state.clone()),
+                postal_code: Option::from(params.postal_code.clone()),
+                country: Option::from("US".to_string()),
+                ..Default::default()
+            },
+            identity: Identity {
+                identity_alias: "ssn".to_string(),
+                identity_value: params.ssn.clone(),
+            },
+            contact: Contact {
+                contact_alias: "default".to_string(),
+                phone: params.phone.clone(),
+                email: params.email.clone(),
+            },
+            crypto_entry: CryptoEntry {
+                crypto_alias: "default".to_string(),
+                crypto_status: Option::None,
+                crypto_address: format!("{:#x}", params.ethereum_address.clone()),
+                crypto_code: "ETH".to_string(),
+            },
+            message: "entity_msg".to_string(),
+        }
+    }
 }
 
 #[derive(Deserialize)]

@@ -25,7 +25,7 @@ impl std::fmt::Display for TransactionType {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum TransactionStatus {
     Queued,
@@ -132,6 +132,7 @@ pub struct GetTransactionsMessage {
     pub search_filters: Option<TransactionSearchFilters>,
 }
 
+#[derive(Clone)]
 pub struct GetTransactionsMessageParams {
     pub sila_handle: Option<String>,
     pub reference: Option<String>,
@@ -150,24 +151,25 @@ impl Default for GetTransactionsMessageParams {
     }
 }
 
-pub async fn get_transactions_message(
-    params: &GetTransactionsMessageParams,
-) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
+impl From<GetTransactionsMessageParams> for GetTransactionsMessage {
+    fn from(params: GetTransactionsMessageParams) -> Self {
+        let sila_params = &*crate::SILA_PARAMS;
+ 
+        let mut header_message: HeaderMessage = header_message();
+        header_message.header.user_handle = Option::from(params.sila_handle.clone());
+        header_message.header.auth_handle = sila_params.app_handle.clone();
 
-    let header_message: HeaderMessage = header_message();
-
-    let mut message = GetTransactionsMessage {
-        header: header_message.header,
-        message: "get_transactions_msg".to_string(),
-        search_filters: params.search_filters.clone(),
-    };
-
-    message.header.user_handle = params.sila_handle.clone();
-    message.header.auth_handle = sila_params.app_handle.clone();
-
-    Ok(serde_json::to_string(&message)?)
-}
+        if params.reference.is_some() {
+            header_message.header.reference = params.reference.unwrap();
+        }
+         
+        GetTransactionsMessage {
+            header: header_message.header,
+            message: "get_transactions_msg".to_string(),
+            search_filters: params.search_filters.clone(),
+        }
+     }
+ }
 
 #[derive(Serialize, Deserialize)]
 pub struct TransactionTimelineItem {

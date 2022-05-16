@@ -30,11 +30,12 @@ use std::time::SystemTime;
 use uuid::Uuid;
 use web3::{types::H160, types::H256};
 
+#[derive(Clone)]
 pub struct SilaParams {
     pub gateway: String,
     pub app_handle: String,
     pub app_address: String,
-    pub app_private_key: String,
+    pub app_private_key: Option<String>,
 }
 
 lazy_static! {
@@ -43,7 +44,7 @@ lazy_static! {
             gateway: env::var("SILA_GATEWAY").expect("SILA_GATEWAY must be set"),
             app_handle: env::var("SILA_APP_HANDLE").expect("SILA_APP_HANDLE must be set"),
             app_address: env::var("SILA_APP_ADDRESS").expect("SILA_APP_ADDRESS must be set"),
-            app_private_key: env::var("SILA_APP_KEY").expect("SILA_APP_KEY must be set"),
+            app_private_key: Option::from(env::var("SILA_APP_KEY").expect("SILA_APP_KEY must be set")),
         }
     };
 }

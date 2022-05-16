@@ -5,6 +5,7 @@ use web3::types::H160;
 use crate::{header_message, Header, HeaderMessage};
 use crate::endpoints::entity::*;
 
+#[derive(Clone)]
 pub struct UpdateIdentityMessageParams {
     pub sila_handle: String,
     pub ethereum_address: H160,
@@ -31,24 +32,21 @@ pub struct UpdateIdentityMessage {
     pub identity_value: String
 }
 
-pub async fn update_identity_message(
-    params: &UpdateIdentityMessageParams,
-) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
+impl From<UpdateIdentityMessageParams> for UpdateIdentityMessage {
+    fn from(params: UpdateIdentityMessageParams) -> Self {
+        let sila_params = &*crate::SILA_PARAMS;
 
-    let header_message: HeaderMessage = header_message();
-    let mut header = header_message.header.clone();
-    header.user_handle = Option::from(params.sila_handle.clone());
-    header.auth_handle = sila_params.app_handle.clone();
+        let mut header_message: HeaderMessage = header_message();
+        header_message.header.user_handle = Option::from(params.sila_handle.clone());
+        header_message.header.auth_handle = sila_params.app_handle.clone();
 
-    let message = UpdateIdentityMessage {
-        header: header,
-        uuid: params.uuid.clone(),
-        identity_alias: params.identity_alias.clone(),
-        identity_value: params.identity_value.clone()
-    };
-
-    Ok(serde_json::to_string(&message)?)
+        UpdateIdentityMessage {
+            header: header_message.header,
+            uuid: params.uuid.clone(),
+            identity_alias: params.identity_alias.clone(),
+            identity_value: params.identity_value.clone()
+        }
+    }
 }
 
 pub async fn update_identity(params: &SignedMessageParams) -> Result<UpdateIdentityResponse, Box<dyn std::error::Error + Sync + Send>> {

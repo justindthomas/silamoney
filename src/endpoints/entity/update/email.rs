@@ -5,6 +5,7 @@ use web3::types::H160;
 use crate::{header_message, Header, HeaderMessage, SignedMessageParams};
 use crate::endpoints::entity::*;
 
+#[derive(Clone)]
 pub struct UpdateEmailMessageParams {
     pub sila_handle: String,
     pub ethereum_address: H160,
@@ -29,23 +30,20 @@ pub struct UpdateEmailMessage {
     pub email: String
 }
 
-pub async fn update_email_message(
-    params: &UpdateEmailMessageParams,
-) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {
-    let sila_params = &*crate::SILA_PARAMS;
+impl From<UpdateEmailMessageParams> for UpdateEmailMessage {
+    fn from(params: UpdateEmailMessageParams) -> Self {
+        let sila_params = &*crate::SILA_PARAMS;
 
-    let header_message: HeaderMessage = header_message();
-    let mut header = header_message.header.clone();
-    header.user_handle = Option::from(params.sila_handle.clone());
-    header.auth_handle = sila_params.app_handle.clone();
+        let mut header_message: HeaderMessage = header_message();
+        header_message.header.user_handle = Option::from(params.sila_handle.clone());
+        header_message.header.auth_handle = sila_params.app_handle.clone();
 
-    let message = UpdateEmailMessage {
-        header: header,
-        uuid: params.uuid.clone(),
-        email: params.email.clone()
-    };
-
-    Ok(serde_json::to_string(&message)?)
+        UpdateEmailMessage {
+            header: header_message.header,
+            uuid: params.uuid.clone(),
+            email: params.email.clone()
+        }
+    }
 }
 
 pub async fn update_email(params: &SignedMessageParams) -> Result<UpdateEmailResponse, Box<dyn std::error::Error + Sync + Send>> {
