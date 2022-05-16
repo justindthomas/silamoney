@@ -1,3 +1,4 @@
+use std::time::Duration;
 use crate::header_message;
 use crate::Header;
 use crate::HeaderMessage;
@@ -268,7 +269,10 @@ pub async fn get_transactions(
 
     let h: GetTransactionsMessage = serde_json::from_str(&params.message.clone()).unwrap();
 
-    let client = reqwest::Client::new();
+    let client = reqwest::ClientBuilder::new()
+        .timeout(Duration::new(30, 0))
+        .build()
+        .unwrap();
 
     let resp: reqwest::Response;
 
