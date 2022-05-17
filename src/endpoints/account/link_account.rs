@@ -10,6 +10,7 @@ pub struct LinkMessageParams {
     pub sila_bank_identifier: String,
     pub sila_bank_token: String,
     pub selected_account_id: String,
+    pub account_name: Option<String>
 }
 
 impl std::fmt::Display for LinkMessageParams {
@@ -38,11 +39,16 @@ impl From<LinkMessageParams> for LinkMessage {
         let mut header: HeaderMessage = header_message();
         header.header.user_handle = Option::from(params.sila_handle.clone());
         header.header.auth_handle = sila_params.app_handle.clone();
+
+        let mut account_name = "default".to_string();
+        if params.account_name.is_some() {
+            account_name = params.account_name.unwrap();
+        }
         
         LinkMessage {
             header: header.header,
             plaid_token: params.sila_bank_token.clone(),
-            account_name: "Friendowment Default".to_string(),
+            account_name,
             selected_account_id: params.selected_account_id.clone(),
         }
     }
