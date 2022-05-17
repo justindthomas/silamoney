@@ -1,4 +1,3 @@
-use std::time::Duration;
 use crate::header_message;
 use crate::Header;
 use crate::HeaderMessage;
@@ -263,14 +262,14 @@ impl std::fmt::Display for GetTransactionsResponse {
 
 pub async fn get_transactions(
     params: &SignedMessageParams,
-) -> Result<GetTransactionsResponse, Box<dyn std::error::Error + Sync + Send>> {
+) -> Result<GetTransactionsResponse, Box<dyn std::error::Error>> {
     let sila_params = &*crate::SILA_PARAMS;
     let _url: String = format!("{}/get_transactions", sila_params.gateway);
+
 
     let h: GetTransactionsMessage = serde_json::from_str(&params.message.clone()).unwrap();
 
     let client = reqwest::ClientBuilder::new()
-        .timeout(Duration::new(30, 0))
         .build()
         .unwrap();
 
@@ -284,7 +283,8 @@ pub async fn get_transactions(
                 .header("authsignature", &params.authsignature)
                 .json(&h)
                 .send()
-                .await?
+                .await
+                .unwrap();
         }
         None => {
             resp = client
@@ -292,11 +292,12 @@ pub async fn get_transactions(
                 .header("authsignature", &params.authsignature)
                 .json(&h)
                 .send()
-                .await?
+                .await
+                .unwrap();
         }
     }
 
-    let response_text = resp.text().await?;
+    let response_text = resp.text().await.unwrap();
     let response: Result<GetTransactionsResponse, serde_json::Error> =
         serde_json::from_str(&response_text);
 
@@ -306,12 +307,12 @@ pub async fn get_transactions(
             Ok(x)
         }
         Ok(x) => Ok(x),
-        Err(e) => {
+        Err(_) => {
             error!(
                 "JSON decoding failure in cancel_transaction response: {}",
                 response_text
             );
-            Err(Box::from(e))
+            Err(Box::from("JSON decoding failure"))
         }
     }
 }

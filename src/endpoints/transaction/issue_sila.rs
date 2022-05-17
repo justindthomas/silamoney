@@ -112,13 +112,16 @@ impl std::fmt::Display for IssueSilaResponse {
 
 pub async fn issue_sila(
     params: &SignedMessageParams,
-) -> Result<IssueSilaResponse, Box<dyn std::error::Error + Sync + Send>> {
+) -> Result<IssueSilaResponse, Box<dyn std::error::Error>> {
     let sila_params = &*crate::SILA_PARAMS;
     let _url: String = format!("{}/issue_sila", sila_params.gateway);
 
     let h: IssueSilaMessage = serde_json::from_str(&params.message.clone()).unwrap();
 
-    let client = reqwest::Client::new();
+    let client = reqwest::ClientBuilder::new()
+        .build()
+        .unwrap();
+        
     let resp: reqwest::Response = client
         .post(&_url.to_owned())
         .header("usersignature", &params.usersignature.clone().unwrap())
@@ -137,9 +140,9 @@ pub async fn issue_sila(
             Ok(x)
         }
         Ok(x) => Ok(x),
-        Err(e) => {
+        Err(_) => {
             error!("issue_sila response error: {}", response_text);
-            Err(Box::from(e))
+            Err(Box::from("issue_sila response error"))
         }
     }
 }
