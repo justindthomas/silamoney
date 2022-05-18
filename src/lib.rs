@@ -153,18 +153,32 @@ impl From<SignDataParams> for SignDataPair {
         let mut user = Option::None;
 
         if params.user_params.is_some() {
+            let up = params.user_params.clone().unwrap();
+
+            let mut user_private_key = Option::None;
+        
+            if up.private_key.is_some() {
+                user_private_key = Option::from(*H256::from_str(&up.private_key.unwrap())
+                .unwrap()
+                .as_fixed_bytes());
+            }
+
             user = Option::from(SignData {
                 address: *H160::from_str(&params.user_params.clone().unwrap().address)
                     .unwrap()
                     .as_fixed_bytes(),
                 message_hash: hash,
-                private_key: Option::from(
-                    *H256::from_str(&params.user_params.unwrap().private_key.unwrap())
-                        .unwrap()
-                        .as_fixed_bytes(),
-                ),
+                private_key: user_private_key,
             })
         };
+
+        let mut app_private_key = Option::None;
+
+        if params.app_params.private_key.is_some() {
+            app_private_key = Option::from(*H256::from_str(&params.app_params.private_key.unwrap())
+            .unwrap()
+            .as_fixed_bytes());
+        }
 
         SignDataPair {
             user,
@@ -173,11 +187,7 @@ impl From<SignDataParams> for SignDataPair {
                     .unwrap()
                     .as_fixed_bytes(),
                 message_hash: hash,
-                private_key: Option::from(
-                    *H256::from_str(&params.app_params.private_key.unwrap())
-                        .unwrap()
-                        .as_fixed_bytes(),
-                ),
+                private_key: app_private_key,
             },
         }
     }
