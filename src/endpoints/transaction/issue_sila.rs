@@ -1,7 +1,6 @@
 use crate::{header_message, Header, HeaderMessage, SignedMessageParams, Status};
 use log::error;
 use serde::{Deserialize, Serialize};
-use web3::types::H160;
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(rename_all="SCREAMING_SNAKE_CASE")]
@@ -41,7 +40,6 @@ pub struct IssueSilaMessage {
 #[derive(Clone)]
 pub struct IssueSilaMessageParams {
     pub sila_handle: String,
-    pub ethereum_address: H160,
     pub amount: i32,
     pub account_name: Option<String>,
     pub descriptor: Option<String>,
@@ -54,7 +52,6 @@ impl Default for IssueSilaMessageParams {
     fn default() -> Self {
         IssueSilaMessageParams {
             sila_handle: String::new(),
-            ethereum_address: H160::zero(),
             amount: 0,
             account_name: Option::from("default".to_string()),
             descriptor: Option::None,

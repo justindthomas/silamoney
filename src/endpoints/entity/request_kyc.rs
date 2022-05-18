@@ -1,6 +1,5 @@
 use log::error;
 use serde::{Deserialize, Serialize};
-use web3::types::H160;
 
 use crate::endpoints::entity::*;
 
@@ -15,7 +14,6 @@ pub struct RequestKycResponse {
 #[derive(Clone)]
 pub struct RequestKycMessageParams {
     pub sila_handle: String,
-    pub ethereum_address: H160,
 }
 
 impl From<RequestKycMessageParams> for HeaderMessage {

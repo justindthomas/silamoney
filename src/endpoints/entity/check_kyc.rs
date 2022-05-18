@@ -3,7 +3,6 @@ use crate::endpoints::entity::*;
 #[derive(Clone)]
 pub struct CheckKycMessageParams {
     pub sila_handle: String,
-    pub ethereum_address: H160,
 }
 
 impl From<CheckKycMessageParams> for HeaderMessage {

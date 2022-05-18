@@ -70,7 +70,6 @@ impl std::fmt::Display for Status {
 #[derive(Clone)]
 pub struct SignedMessageParams {
     pub sila_handle: Option<String>,
-    pub ethereum_address: Option<H160>,
     pub message: String,
     pub usersignature: Option<String>,
     pub authsignature: String,
@@ -108,7 +107,7 @@ pub struct HeaderMessage {
     pub message: String,
 }
 
-pub fn hash_message(message: String) -> [u8; 32] {
+fn hash_message(message: String) -> [u8; 32] {
     let mut hasher = Keccak256::new();
     hasher.update(&message);
     hasher

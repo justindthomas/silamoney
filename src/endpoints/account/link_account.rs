@@ -6,7 +6,6 @@ use crate::{header_message, Header, HeaderMessage, SignedMessageParams, Status};
 #[derive(Clone)]
 pub struct LinkMessageParams {
     pub sila_handle: String,
-    pub ethereum_address: String,
     pub sila_bank_identifier: String,
     pub sila_bank_token: String,
     pub selected_account_id: String,
@@ -15,9 +14,8 @@ pub struct LinkMessageParams {
 
 impl std::fmt::Display for LinkMessageParams {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "LinkParams ( sila_handle: {}, ethereum_address: {}, bank_identifier: {}, bank_token: {}, selected_account_id: {}", 
+        write!(f, "LinkParams ( sila_handle: {}, bank_identifier: {}, bank_token: {}, selected_account_id: {}", 
             self.sila_handle,
-            self.ethereum_address,
             self.sila_bank_identifier,
             self.sila_bank_token,
             self.selected_account_id)
