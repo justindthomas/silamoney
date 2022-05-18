@@ -6,91 +6,50 @@ This is an early work-in-progress. Work is currently focused on establishing the
 
 ## Example
 
-A call to Sila's `check_handle` endpoint can be accomplished in the following way.
+A call to Sila's `check_handle` endpoint can be accomplished in the following way. This file can also be found at `examples/check_handle.rs` in this repository.
+
+All of the `silamoney::` functions are `async` so you'll need to use an appropriate runtime like `tokio`.
 
 ```rust
-use serde::{Deserialize, Serialize};
-use serde_json;
-use std::io::stdin;
-use std::str::FromStr;
-use web3::types::{H160, H256};
-
-use silamoney::{
-    check_handle, check_handle_message, default_sign, hash_message, CheckHandleMessageParams,
-    SignData, SignedMessageParams,
-};
-
-#[derive(Deserialize, Serialize)]
-struct SilaSignServiceParams {
-    address: String,
-    message: String,
-    hashed: Option<bool>,
-}
-
 #[tokio::main]
 async fn main() {
-```
-
-This section will capture a handle to check for existence from stdin.
-
-```rust
-    println!("Handle:");
-    let mut handle_line = String::new();
-    stdin().read_line(&mut handle_line).unwrap();
-
-    let handle = handle_line.trim_end();
 ```
 
 This section defines the addresses used in the call to Sila's API.
 
 ```rust
-    // app_address: the address of your application as registered with Sila
-    let app_address = H160::from_str("0x...")
-        .expect("failed to parse app_address");
-    
-    // app_private_key: the private key associated with your application's registered address
-    let app_private_key = H256::from_str("0x...)
-        .expect("failed to parse app_private_key");
+    // you'll need your registered applications address and key; we define those here with these
+    // variable names to streamline the KeyParams constructor further down
+
+    let address = "0x...".to_string();
+    let private_key = Option::from("0x...".to_string());
 ```
 
-This struct is in silamoney::CheckHandleMessageParams.
+These `fn` references in `silamoney::*` build the JSON object that will be sent to Sila based on Sila's API expectations.
 
 ```rust
-    let check_params = CheckHandleMessageParams {
-        sila_handle: handle.to_string(),
-    };
+    let message = serde_json::to_string(&HeaderMessage::from(CheckHandleMessageParams {
+        sila_handle: "handle-to-check".to_string(),
+    })).unwrap();
 ```
 
-This `fn` in `silamoney::*` builds the JSON object that will be sent to Sila based on Sila's API expectations.
+This function prepares the data to be signed by whatever `Signer` you're using. We'll use `default_sign`.
+
+Because `check_handle` does not require a `usersignature`, `Option::None` is provided to the function to skip the creation of that Signature. For `KeyParams` we only need to specify the variable names previously defined because they match the expectations of the `struct`.
 
 ```rust
-    let message = check_handle_message(&check_params)
-        .await
-        .expect("check_handle_message failed");
-```
-
-This is a call to `silamoney::hash_message` that begins to set up the structure necessary to authenticate the request to the Sila API.
-
-```rust
-    let hash = hash_message(message.clone());
-```
-
-This struct is in silamoney::SignData and is used by the Signer function to sign the Sila API request for authentication against your registered application.
-
-```rust
-    let app_data = SignData {
-        address: *app_address.as_fixed_bytes(),
-        data: hash,
-        private_key: Option::from(*app_private_key.as_fixed_bytes()),
-    };
+    let sdp = SignDataPair::from(SignDataParams {
+        message: message.clone(),
+        user_params: Option::None,
+        app_params: KeyParams { address, private_key },
+    });
 ```
 
 Provisions exist in the `silamoney` crate to specify a custom signer. This `default_sign` function builds a Signer that requires the application to have direct access to customer private keys.
     
-Because `check_handle` does not require a `usersignature`, `Option::None` is provided to the function to skip the creation of that Signature.
 
 ```rust
-    let signatures = default_sign(Option::None, app_data).await;
+    let signatures = default_sign(sdp.user, sdp.app).await;
 ```
 
 This struct is is in `silamoney::SignedMessageParams`. It is used to send the request to the `check_handle` endpoint.
@@ -132,8 +91,7 @@ struct SilaSignServiceParams {
     message: String
 }
 
-let app_address = H160::from_str("0x...")
-    .expect("failed to parse app_address");
+let app_address = H160::from_str("0x...").unwrap();
         
 let mut app_data = SignData {
     address: *app_address.as_fixed_bytes(),

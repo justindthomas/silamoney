@@ -230,6 +230,18 @@ pub struct CheckHandleMessageParams {
     pub sila_handle: String,
 }
 
+impl From<CheckHandleMessageParams> for HeaderMessage {
+    fn from(params: CheckHandleMessageParams) -> Self {
+        let sila_params = &*crate::SILA_PARAMS;
+
+        let mut header: HeaderMessage = header_message();
+        header.header.user_handle = Option::from(params.sila_handle.clone());
+        header.header.auth_handle = sila_params.app_handle.clone();
+
+        header
+    }
+}
+
 pub async fn check_handle_message(
     params: &CheckHandleMessageParams,
 ) -> Result<String, Box<dyn std::error::Error + Sync + Send>> {

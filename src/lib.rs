@@ -17,6 +17,7 @@ pub use endpoints::transaction::issue_sila::*;
 pub use endpoints::transaction::redeem_sila::*;
 pub use endpoints::transaction::transfer_sila::*;
 pub use endpoints::wallet::get_sila_balance::*;
+use std::str::FromStr;
 
 use eth_checksum;
 use lazy_static::lazy_static;
@@ -44,7 +45,9 @@ lazy_static! {
             gateway: env::var("SILA_GATEWAY").expect("SILA_GATEWAY must be set"),
             app_handle: env::var("SILA_APP_HANDLE").expect("SILA_APP_HANDLE must be set"),
             app_address: env::var("SILA_APP_ADDRESS").expect("SILA_APP_ADDRESS must be set"),
-            app_private_key: Option::from(env::var("SILA_APP_KEY").expect("SILA_APP_KEY must be set")),
+            app_private_key: Option::from(
+                env::var("SILA_APP_KEY").expect("SILA_APP_KEY must be set"),
+            ),
         }
     };
 }
@@ -119,10 +122,17 @@ pub fn checksum(address: &str) -> String {
     eth_checksum::checksum(address)
 }
 
+#[derive(Deserialize, Serialize, Clone)]
+pub struct KeyParams {
+    pub address: String,
+    pub private_key: Option<String>,
+}
+
 #[derive(Deserialize, Serialize)]
-pub struct Signatures {
-    pub usersignature: Option<String>,
-    pub authsignature: String,
+pub struct SignDataParams {
+    pub message: String,
+    pub user_params: Option<KeyParams>,
+    pub app_params: KeyParams,
 }
 
 #[derive(Copy, Clone)]
@@ -130,6 +140,54 @@ pub struct SignData {
     pub address: [u8; 20],
     pub message_hash: [u8; 32],
     pub private_key: Option<[u8; 32]>,
+}
+
+#[derive(Copy, Clone)]
+pub struct SignDataPair {
+    pub user: Option<SignData>,
+    pub app: SignData,
+}
+
+impl From<SignDataParams> for SignDataPair {
+    fn from(params: SignDataParams) -> Self {
+        let hash = hash_message(params.message);
+        let mut user = Option::None;
+
+        if params.user_params.is_some() {
+            user = Option::from(SignData {
+                address: *H160::from_str(&params.user_params.clone().unwrap().address)
+                    .unwrap()
+                    .as_fixed_bytes(),
+                message_hash: hash,
+                private_key: Option::from(
+                    *H256::from_str(&params.user_params.unwrap().private_key.unwrap())
+                        .unwrap()
+                        .as_fixed_bytes(),
+                ),
+            })
+        };
+
+        SignDataPair {
+            user,
+            app: SignData {
+                address: *H160::from_str(&params.app_params.address)
+                    .unwrap()
+                    .as_fixed_bytes(),
+                message_hash: hash,
+                private_key: Option::from(
+                    *H256::from_str(&params.app_params.private_key.unwrap())
+                        .unwrap()
+                        .as_fixed_bytes(),
+                ),
+            },
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct Signatures {
+    pub usersignature: Option<String>,
+    pub authsignature: String,
 }
 
 #[derive(Clone)]
@@ -198,13 +256,6 @@ pub async fn default_sign(user_data: Option<SignData>, app_data: SignData) -> Si
             authsignature: app_signer.sign(app_data).await.data,
         },
     }
-}
-
-// message must be pre-hashed for this data field
-pub struct SignaturesParams {
-    pub address: H160,
-    pub private_key: Option<H256>,
-    pub data: [u8; 32],
 }
 
 pub fn header_message() -> HeaderMessage {
