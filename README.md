@@ -6,7 +6,7 @@ This is an early work-in-progress. Work is currently focused on establishing the
 
 ## Example
 
-A call to Sila's `check_handle` endpoint can be accomplished in the following way. This file can also be found at `examples/check_handle.rs` in this repository.
+A call to Sila's `check_handle` endpoint can be accomplished in the following way.
 
 All of the `silamoney::` functions are `async` so you'll need to use an appropriate runtime like `tokio`.
 
