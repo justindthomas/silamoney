@@ -18,7 +18,7 @@ async fn main() {
 This section defines the addresses used in the call to Sila's API.
 
 ```rust
-    // you'll need your registered applications address and key; we define those here with these
+    // you'll need your registered application's address and key; we define those here with these
     // variable names to streamline the KeyParams constructor further down
 
     let address = "0x...".to_string();
