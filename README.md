@@ -4,6 +4,8 @@ This crate is intended to reduce the effort necessary by Rust developers to inte
 
 This is an early work-in-progress. Work is currently focused on establishing the framework for interacting with the API and beginning to build modules specific to functionality provided by the Sila endpoints.
 
+_Please note that this crate is not an official Sila project. I (Justin) am affiliated with Sila, but I'm building this for my own purposes (I like Rust and want to use it to interact with our platform). Resolution to any issues should be sought via the project's GitHub repository._
+
 ## Example
 
 A call to Sila's `check_handle` endpoint can be accomplished in the following way.
