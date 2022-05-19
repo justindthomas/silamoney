@@ -39,19 +39,14 @@ This function prepares the data to be signed by whatever `Signer` you're using. 
 
 Because `check_handle` does not require a `usersignature`, `Option::None` is provided to the function to skip the creation of that Signature. For `KeyParams` we only need to specify the variable names previously defined because they match the expectations of the `struct`.
 
+Provisions exist in the `silamoney` crate to specify a custom signer. This `default_sign` function builds a Signer that requires the application to have direct access to customer private keys.
+
 ```rust
-    let sdp = SignDataPair::from(SignDataParams {
+    let signatures = default_sign(SignDataPair::from(SignDataParams {
         message: message.clone(),
         user_params: Option::None,
         app_params: KeyParams { address, private_key },
-    });
-```
-
-Provisions exist in the `silamoney` crate to specify a custom signer. This `default_sign` function builds a Signer that requires the application to have direct access to customer private keys.
-    
-
-```rust
-    let signatures = default_sign(sdp.user, sdp.app).await;
+    })).await;
 ```
 
 This struct is is in `silamoney::SignedMessageParams`. It is used to send the request to the `check_handle` endpoint.
