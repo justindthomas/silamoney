@@ -19,7 +19,6 @@ pub use endpoints::transaction::transfer_sila::*;
 pub use endpoints::wallet::get_sila_balance::*;
 use std::str::FromStr;
 
-use eth_checksum;
 use lazy_static::lazy_static;
 use secp256k1::{Secp256k1, SecretKey};
 use serde::{Deserialize, Serialize};
@@ -124,10 +123,6 @@ fn hash_message(message: String) -> [u8; 32] {
         .as_slice()
         .try_into()
         .expect("Wrong length")
-}
-
-pub fn checksum(address: &str) -> String {
-    eth_checksum::checksum(address)
 }
 
 #[derive(Deserialize, Serialize, Clone)]
