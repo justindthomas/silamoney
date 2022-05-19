@@ -2,7 +2,7 @@
 name = "silamoney"
 description = "A rust library for interacting with the Sila Banking API (https://silamoney.com)"
 license = "MIT"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 
 [dependencies]
