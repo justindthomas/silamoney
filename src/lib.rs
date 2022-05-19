@@ -41,13 +41,22 @@ pub struct SilaParams {
 
 lazy_static! {
     static ref SILA_PARAMS: SilaParams = {
+        let gateway = match env::var("SILA_ENV") {
+            Ok(x) if x == "PRODUCTION" => "https://api.silamoney.com/0.2".to_string(),
+            Ok(_) => "https://sandbox.silamoney.com/0.2".to_string(),
+            Err(_) => "https://sandbox.silamoney.com/0.2".to_string()
+        };
+
+        let app_private_key = match env::var("SILA_APP_KEY") {
+            Ok(x) => Option::from(x),
+            Err(_) => Option::None
+        };
+
         SilaParams {
-            gateway: env::var("SILA_GATEWAY").expect("SILA_GATEWAY must be set"),
+            gateway,
+            app_private_key,
             app_handle: env::var("SILA_APP_HANDLE").expect("SILA_APP_HANDLE must be set"),
             app_address: env::var("SILA_APP_ADDRESS").expect("SILA_APP_ADDRESS must be set"),
-            app_private_key: Option::from(
-                env::var("SILA_APP_KEY").expect("SILA_APP_KEY must be set"),
-            ),
         }
     };
 }
@@ -227,7 +236,8 @@ where
     }
 }
 
-pub async fn default_sign(user_data: Option<SignData>, app_data: SignData) -> Signatures {
+pub async fn default_sign(data: SignDataPair) -> Signatures {
+    
     let closure = async move |x: SignData| {
         let message = secp256k1::Message::from_slice(&x.message_hash).unwrap();
 
@@ -255,14 +265,14 @@ pub async fn default_sign(user_data: Option<SignData>, app_data: SignData) -> Si
     let user_signer = Signer::new(closure);
     let app_signer = Signer::new(closure);
 
-    match user_data {
+    match data.user {
         Some(x) => Signatures {
             usersignature: Option::from(user_signer.sign(x).await.data),
-            authsignature: app_signer.sign(app_data).await.data,
+            authsignature: app_signer.sign(data.app).await.data,
         },
         None => Signatures {
             usersignature: Option::None,
-            authsignature: app_signer.sign(app_data).await.data,
+            authsignature: app_signer.sign(data.app).await.data,
         },
     }
 }
