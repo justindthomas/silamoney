@@ -2,7 +2,7 @@ use log::error;
 use serde::{Deserialize, Serialize};
 use web3::types::H160;
 
-use crate::endpoints::entity::{Address, Contact, CryptoEntry, Entity, Identity};
+use crate::endpoints::entity::{Address, Contact, CryptoEntry, Entity, Identity, IdentityAlias};
 use crate::{header_message, Header, HeaderMessage, SignedMessageParams, Status};
 
 #[derive(Deserialize, Serialize)]
@@ -59,7 +59,7 @@ impl From<RegisterMessageParams> for RegisterMessage {
                 ..Default::default()
             },
             identity: Identity {
-                identity_alias: "ssn".to_string(),
+                identity_alias: IdentityAlias::Ssn,
                 identity_value: params.ssn.clone(),
             },
             contact: Contact {

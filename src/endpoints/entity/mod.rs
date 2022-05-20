@@ -54,8 +54,15 @@ impl Default for Address {
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum IdentityAlias {
+    Ssn,
+    Ein
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct Identity {
-    pub identity_alias: String,
+    pub identity_alias: IdentityAlias,
     pub identity_value: String,
 }
 

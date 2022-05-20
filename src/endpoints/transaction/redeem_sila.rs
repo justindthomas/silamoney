@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{header_message, HeaderMessage, SignedMessageParams, Status};
 
 #[derive(Deserialize, Serialize, Clone)]
+#[serde(rename_all="SCREAMING_SNAKE_CASE")]
 pub enum RedeemProcessingType {
     StandardAch,
     SameDayAch,

@@ -38,8 +38,8 @@ pub struct SilaParams {
     pub app_private_key: Option<String>,
 }
 
-lazy_static! {
-    static ref SILA_PARAMS: SilaParams = {
+impl SilaParams {
+    pub fn new() -> Self {
         let gateway = match env::var("SILA_ENV") {
             Ok(x) if x == "PRODUCTION" => "https://api.silamoney.com/0.2".to_string(),
             Ok(_) => "https://sandbox.silamoney.com/0.2".to_string(),
@@ -57,6 +57,12 @@ lazy_static! {
             app_handle: env::var("SILA_APP_HANDLE").expect("SILA_APP_HANDLE must be set"),
             app_address: env::var("SILA_APP_ADDRESS").expect("SILA_APP_ADDRESS must be set"),
         }
+    }
+}
+
+lazy_static! {
+    static ref SILA_PARAMS: SilaParams = {
+        SilaParams::new()
     };
 }
 
